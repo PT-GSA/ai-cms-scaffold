@@ -411,7 +411,7 @@ function NewContentEntryPageContent() {
                 <FileText className="h-5 w-5" />
                 <span>Content Type</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className='text-white'>
                 Pilih jenis content yang ingin dibuat
               </CardDescription>
             </CardHeader>
@@ -419,12 +419,12 @@ function NewContentEntryPageContent() {
               <div className="space-y-4">
                 <Label htmlFor="content-type">Content Type *</Label>
                 <Select onValueChange={handleContentTypeChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-white">
                     <SelectValue placeholder="Pilih content type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className='text-white'>
                     {contentTypes.map((contentType) => (
-                      <SelectItem key={contentType.id} value={contentType.id}>
+                      <SelectItem key={contentType.id} value={contentType.id} className="text-white data-[highlighted]:text-white data-[state=checked]:text-white">
                         <div className="flex items-center space-x-2">
                           <span>{contentType.display_name}</span>
                           <Badge variant="secondary">{contentType.name}</Badge>

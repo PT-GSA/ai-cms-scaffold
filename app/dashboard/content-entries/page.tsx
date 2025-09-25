@@ -604,9 +604,9 @@ export default function ContentEntriesPage() {
               ) : entries.length === 0 ? (
                 <div className="text-center py-8">
                   <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-semibold text-gray-900">Tidak ada entries</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-white">Tidak ada entries</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Mulai dengan membuat content entry pertama Anda.
+                    Mulai dengan membuat content entry pertama Anda
                   </p>
                   <div className="mt-6">
                     <Button onClick={() => router.push('/dashboard/content-entries/new')}>
@@ -629,7 +629,7 @@ export default function ContentEntriesPage() {
                             {entry.status}
                           </Badge>
                         </div>
-                        <CardTitle className="text-sm font-medium line-clamp-2">
+                        <CardTitle className="text-sm text-white font-medium line-clamp-2">
                           {entry.title}
                         </CardTitle>
                       </CardHeader>
@@ -686,7 +686,7 @@ export default function ContentEntriesPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <h3 className="text-sm font-medium text-gray-900 truncate">
+                            <h3 className="text-sm font-medium text-white truncate">
                               {entry.title}
                             </h3>
                             <Badge variant={getStatusVariant(entry.status)} className="w-fit">

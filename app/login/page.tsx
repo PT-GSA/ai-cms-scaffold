@@ -129,7 +129,7 @@ export default function LoginPage() {
       >
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center text-gray-400 hover:text-white transition-colors mb-6">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Back to home
           </Link>
           <div className="flex items-center justify-center mb-4">
