@@ -158,7 +158,7 @@ export default function LoginPage() {
                   <Mail className="h-8 w-8 text-primary" />
                 </div>
                 <div>
-                  <p className="text-gray-300 mb-2">We've sent a magic link to:</p>
+                  <p className="text-gray-300 mb-2">We&apos;ve sent a magic link to:</p>
                   <p className="text-white font-medium">{email}</p>
                 </div>
                 <p className="text-sm text-gray-400">
@@ -294,13 +294,13 @@ export default function LoginPage() {
 
         <div className="text-center text-sm text-gray-400 mt-6 space-y-2">
           <p>
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/signup" className="text-primary hover:text-primary/80 underline">
               Sign up
             </Link>
           </p>
           {loginMethod === "magic" && (
-            <p>No account needed with magic link. Just enter your email and we'll send you a secure login link.</p>
+            <p>No account needed with magic link. Just enter your email and we&apos;ll send you a secure login link.</p>
           )}
         </div>
       </motion.div>

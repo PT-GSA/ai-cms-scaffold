@@ -144,7 +144,7 @@ export default function SignUpPage() {
                   <UserPlus className="h-8 w-8 text-primary" />
                 </div>
                 <div>
-                  <p className="text-gray-300 mb-2">We've sent a confirmation link to:</p>
+                  <p className="text-gray-300 mb-2">We&apos;ve sent a confirmation link to:</p>
                   <p className="text-white font-medium">{email}</p>
                 </div>
                 <p className="text-sm text-gray-400">

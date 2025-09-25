@@ -137,7 +137,7 @@ export default function ResetPasswordPage() {
                 </div>
                 <div>
                   <p className="text-gray-300 mb-2">Your password has been successfully updated!</p>
-                  <p className="text-sm text-gray-400">You'll be redirected to your dashboard shortly.</p>
+                  <p className="text-sm text-gray-400">You&apos;ll be redirected to your dashboard shortly.</p>
                 </div>
                 <Button onClick={() => router.push("/dashboard")} className="w-full">
                   Go to Dashboard

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase"
-import { executeSQL, logSchema } from "@/lib/database"
+import { createServerSupabaseClient } from "@/lib/supabase-server"
+import { executeQuery, logSchema } from "@/lib/database"
 import { schemaToSQL } from "@/utils/schema-to-sql"
 import { z } from "zod"
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const results = []
     for (const sql of sqlStatements) {
       try {
-        const result = await executeSQL(sql)
+        const result = await executeQuery(sql)
         results.push({ sql, success: true, result })
       } catch (error) {
         console.error("SQL execution failed:", error)

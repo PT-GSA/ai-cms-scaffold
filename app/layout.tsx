@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "AI-Powered Headless CMS",
   description: "Generate database schemas instantly with AI + Supabase",
-    generator: 'v0.app'
+    generator: 'GSA'
 }
 
 export default function RootLayout({

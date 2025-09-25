@@ -1,10 +1,10 @@
 import { createServiceClient } from "./supabase"
 
-export async function executeSQL(sql: string) {
+export async function executeQuery(query: string): Promise<{ success: boolean; data: unknown }> {
   const supabase = createServiceClient()
 
   try {
-    const { data, error } = await supabase.rpc("execute_sql", { sql_query: sql })
+    const { data, error } = await supabase.rpc("execute_sql", { sql_query: query })
 
     if (error) {
       throw new Error(`Database error: ${error.message}`)
@@ -17,7 +17,7 @@ export async function executeSQL(sql: string) {
   }
 }
 
-export async function logSchema(schemaName: string, schemaJson: any, sqlQuery: string) {
+export async function logSchema(schemaName: string, schemaJson: unknown, sqlQuery: string) {
   const supabase = createServiceClient()
 
   const { data, error } = await supabase

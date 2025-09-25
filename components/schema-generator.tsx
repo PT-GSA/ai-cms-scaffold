@@ -13,7 +13,19 @@ import { Loader2, Zap, Database, Copy, Check } from "lucide-react"
 export function SchemaGenerator() {
   const [description, setDescription] = useState("")
   const [schemaName, setSchemaName] = useState("")
-  const [generatedSchema, setGeneratedSchema] = useState<any>(null)
+  const [generatedSchema, setGeneratedSchema] = useState<{
+    tables: Array<{
+      name: string;
+      columns: Array<{
+        name: string;
+        type: string;
+        nullable?: boolean;
+        primary_key?: boolean;
+        unique?: boolean;
+        default?: string | null;
+      }>;
+    }>;
+  } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -49,7 +61,8 @@ export function SchemaGenerator() {
         title: "Success",
         description: "Schema generated successfully!",
       })
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Schema generation error:', error)
       toast({
         title: "Error",
         description: "Failed to generate schema. Please try again.",
@@ -122,19 +135,29 @@ export function SchemaGenerator() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
       {/* Input Section */}
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-        <Card className="bg-gray-900 border-gray-800">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-white">
-              <Zap className="h-5 w-5 text-primary" />
-              <span>Generate Schema</span>
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }} 
+        animate={{ opacity: 1, x: 0 }} 
+        transition={{ duration: 0.5 }}
+        className="space-y-6"
+      >
+        <Card className="bg-gray-900 border-gray-800 shadow-xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center space-x-3 text-white">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Zap className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-semibold">Generate Schema</span>
             </CardTitle>
+            <p className="text-gray-400 text-sm mt-2">
+              Describe your database requirements in natural language
+            </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="schema-name" className="text-gray-300">
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="schema-name" className="text-gray-300 font-medium">
                 Schema Name
               </Label>
               <Input
@@ -142,11 +165,11 @@ export function SchemaGenerator() {
                 placeholder="e.g., blog_system, ecommerce_store"
                 value={schemaName}
                 onChange={(e) => setSchemaName(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500/20 h-11"
               />
             </div>
-            <div>
-              <Label htmlFor="description" className="text-gray-300">
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-gray-300 font-medium">
                 Description
               </Label>
               <Textarea
@@ -154,19 +177,23 @@ export function SchemaGenerator() {
                 placeholder="Describe your database schema in natural language. For example: 'I need a blog system with users, posts, comments, and categories. Users can write posts, and posts can have multiple comments and belong to categories.'"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={8}
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-400 resize-none"
+                rows={10}
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 resize-none focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
-            <Button onClick={handleGenerate} disabled={isGenerating || !description.trim()} className="w-full">
+            <Button 
+              onClick={handleGenerate} 
+              disabled={isGenerating || !description.trim()} 
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+            >
               {isGenerating ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Generating Schema...
                 </>
               ) : (
                 <>
-                  <Zap className="mr-2 h-4 w-4" />
+                  <Zap className="mr-2 h-5 w-5" />
                   Generate Schema
                 </>
               )}
@@ -180,53 +207,71 @@ export function SchemaGenerator() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
+        className="space-y-6"
       >
-        <Card className="bg-gray-900 border-gray-800">
-          <CardHeader>
+        <Card className="bg-gray-900 border-gray-800 shadow-xl">
+          <CardHeader className="pb-4">
             <CardTitle className="flex items-center justify-between text-white">
-              <div className="flex items-center space-x-2">
-                <Database className="h-5 w-5 text-primary" />
-                <span>Generated Schema</span>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-600 rounded-lg">
+                  <Database className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xl font-semibold">Generated Schema</span>
               </div>
               {generatedSchema && (
-                <Button variant="ghost" size="sm" onClick={copyToClipboard} className="text-gray-400 hover:text-white">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={copyToClipboard} 
+                  className="text-gray-400 hover:text-white hover:bg-gray-800 p-2"
+                >
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               )}
             </CardTitle>
+            <p className="text-gray-400 text-sm mt-2">
+              Review and apply your generated database schema
+            </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             {generatedSchema ? (
-              <div className="space-y-4">
-                <div className="rounded-lg bg-gray-800 p-4">
-                  <pre className="text-sm text-gray-300 overflow-auto max-h-96">
+              <div className="space-y-6">
+                <div className="rounded-lg bg-gray-800 border border-gray-700 p-4">
+                  <pre className="text-sm text-gray-300 overflow-auto max-h-96 whitespace-pre-wrap">
                     {JSON.stringify(generatedSchema, null, 2)}
                   </pre>
                 </div>
                 <Button
                   onClick={handleApply}
                   disabled={isApplying || !schemaName.trim()}
-                  className="w-full"
+                  className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium transition-colors"
                   variant="default"
                 >
                   {isApplying ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Applying Schema...
                     </>
                   ) : (
                     <>
-                      <Database className="mr-2 h-4 w-4" />
+                      <Database className="mr-2 h-5 w-5" />
                       Apply Schema to Database
                     </>
                   )}
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-96 text-gray-500">
-                <div className="text-center">
-                  <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Generated schema will appear here</p>
+              <div className="flex items-center justify-center h-96 text-gray-500 border-2 border-dashed border-gray-700 rounded-lg">
+                <div className="text-center space-y-4">
+                  <div className="p-4 bg-gray-800 rounded-full mx-auto w-fit">
+                    <Database className="h-12 w-12 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-gray-400">No Schema Generated</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Generated schema will appear here after processing
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
