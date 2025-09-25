@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 
 interface ContentEntryField {
   field_name: string
@@ -22,7 +22,7 @@ interface CreateContentEntryRequest {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServiceClient()
+    const supabase = await createAdminSupabaseClient()
     const { searchParams } = new URL(request.url)
     
     // Query parameters
@@ -35,13 +35,14 @@ export async function GET(request: NextRequest) {
     
     const offset = (page - 1) * limit
 
-    // Base query
+    // Base query - menggunakan struktur database yang ada (dengan kolom data JSONB)
     let baseSelect = `
       id,
       content_type_id,
-      title,
       slug,
       status,
+      data,
+      meta_data,
       published_at,
       created_by,
       updated_by,
@@ -57,22 +58,14 @@ export async function GET(request: NextRequest) {
 
     if (includeFields) {
       baseSelect += `,
-      content_entry_values (
+      content_type_fields (
         id,
-        text_value,
-        number_value,
-        boolean_value,
-        date_value,
-        datetime_value,
-        json_value,
-        content_type_fields (
-          id,
-          field_name,
-          display_name,
-          field_type,
-          is_required,
-          is_unique
-        )
+        field_name,
+        display_name,
+        field_type,
+        is_required,
+        is_unique,
+        field_options
       )`
     }
 
@@ -90,7 +83,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,slug.ilike.%${search}%`)
+      // Search dalam kolom data JSONB untuk title atau dalam slug
+      query = query.or(`data->>title.ilike.%${search}%,slug.ilike.%${search}%`)
     }
 
     // Apply pagination dan ordering
@@ -114,9 +108,11 @@ export async function GET(request: NextRequest) {
       const baseEntry = {
         id: entry.id,
         content_type_id: entry.content_type_id,
-        title: entry.title,
+        title: entry.data?.title || 'Untitled', // Ambil title dari data JSONB
         slug: entry.slug,
         status: entry.status,
+        data: entry.data,
+        meta_data: entry.meta_data,
         published_at: entry.published_at,
         created_by: entry.created_by,
         updated_by: entry.updated_by,
@@ -170,7 +166,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServiceClient()
+    const supabase = createAdminSupabaseClient()
     const body: CreateContentEntryRequest = await request.json()
 
     const { 
@@ -225,18 +221,19 @@ export async function POST(request: NextRequest) {
       finalSlug = slugData
     }
 
-    // Create content entry
+    // Create content entry - menggunakan struktur database yang ada (tanpa kolom title)
+    const entryData = {
+      content_type_id,
+      slug: finalSlug,
+      status,
+      published_at: status === 'published' && published_at ? published_at : null,
+      data: { title, ...Object.fromEntries(fields.map(f => [f.field_name, f.value])) } // Store title dan fields dalam JSONB data
+      // Tidak menggunakan created_by dan updated_by untuk sementara karena belum ada user auth
+    }
+
     const { data: entry, error: entryError } = await supabase
       .from('content_entries')
-      .insert({
-        content_type_id,
-        title,
-        slug: finalSlug,
-        status,
-        published_at: status === 'published' && published_at ? published_at : null,
-        created_by: '00000000-0000-0000-0000-000000000000', // TODO: Get from auth
-        updated_by: '00000000-0000-0000-0000-000000000000'  // TODO: Get from auth
-      })
+      .insert(entryData)
       .select()
       .single()
 
@@ -248,97 +245,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create field values
-    if (fields.length > 0) {
-      // Get content type fields untuk validasi
-      const { data: contentTypeFields, error: fieldsError } = await supabase
-        .from('content_type_fields')
-        .select('*')
-        .eq('content_type_id', content_type_id)
-
-      if (fieldsError) {
-        console.error('Error fetching content type fields:', fieldsError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch content type fields' },
-          { status: 500 }
-        )
-      }
-
-      const fieldMap = new Map(contentTypeFields?.map(f => [f.field_name, f]) || [])
-
-      // Prepare field values untuk insert
-      const fieldValues = fields.map(field => {
-        const fieldDef = fieldMap.get(field.field_name)
-        if (!fieldDef) {
-          throw new Error(`Field ${field.field_name} not found in content type`)
-        }
-
-        // Determine which column to use based on field type
-        let value: any = field.value
-        const entryValue: Record<string, unknown> = {
-          content_entry_id: entry.id,
-          content_type_field_id: fieldDef.id,
-        }
-
-        switch (fieldDef.field_type) {
-          case 'text':
-          case 'textarea':
-          case 'rich_text':
-          case 'select':
-            entryValue.text_value = value
-            break
-          case 'number':
-            value = typeof value === 'string' ? parseFloat(value) : value
-            entryValue.number_value = value
-            break
-          case 'boolean':
-            value = typeof value === 'string' ? value === 'true' : value
-            entryValue.boolean_value = value
-            break
-          case 'date':
-            entryValue.date_value = value
-            break
-          case 'datetime':
-            entryValue.datetime_value = value
-            break
-          case 'multi_select':
-          case 'media':
-          case 'relation':
-            value = typeof value === 'string' ? JSON.parse(value) : value
-            entryValue.json_value = value
-            break
-          default:
-            entryValue.text_value = value
-        }
-
-        return entryValue
-      })
-
-      // Insert field values
-      const { error: valuesError } = await supabase
-        .from('content_entry_values')
-        .insert(fieldValues)
-
-      if (valuesError) {
-        console.error('Error creating field values:', valuesError)
-        
-        // Rollback: delete the created entry
-        await supabase
-          .from('content_entries')
-          .delete()
-          .eq('id', entry.id)
-
-        return NextResponse.json(
-          { success: false, error: 'Failed to create field values' },
-          { status: 500 }
-        )
-      }
-    }
-
+    // Return success response dengan entry yang dibuat
     return NextResponse.json({
       success: true,
-      message: 'Content entry created successfully',
-      data: entry
+      data: entry,
+      message: 'Content entry created successfully'
     })
 
   } catch (error) {

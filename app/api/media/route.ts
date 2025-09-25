@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
@@ -9,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -75,11 +73,11 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST - Upload media file
+ * POST - Upload media file ke Supabase Storage
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -129,19 +127,28 @@ export async function POST(request: NextRequest) {
       fileTypeCategory = 'document'
     }
 
-    // Create upload directory if not exists
-    const uploadDir = join(process.cwd(), 'public', 'uploads', fileTypeCategory)
-    await mkdir(uploadDir, { recursive: true })
+    // Upload file ke Supabase Storage
+    const bucketPath = `${fileTypeCategory}/${uniqueFilename}`
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('media-files')
+      .upload(bucketPath, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
 
-    // Save file to disk
-    const filePath = join(uploadDir, uniqueFilename)
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
+    if (uploadError) {
+      console.error('Error uploading to Supabase Storage:', uploadError)
+      return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 })
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('media-files')
+      .getPublicUrl(bucketPath)
 
     // Get image dimensions if it's an image
-    let width = null
-    let height = null
+    const width = null
+    const height = null
     
     if (fileTypeCategory === 'image' && file.type !== 'image/svg+xml') {
       // For now, we'll skip getting dimensions. In production, you might want to use a library like 'sharp'
@@ -157,7 +164,8 @@ export async function POST(request: NextRequest) {
       .insert({
         filename: uniqueFilename,
         original_filename: file.name,
-        file_path: `/uploads/${fileTypeCategory}/${uniqueFilename}`,
+        file_path: publicUrl,
+        storage_path: bucketPath,
         file_size: file.size,
         mime_type: file.type,
         file_type: fileTypeCategory,
@@ -173,6 +181,8 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error('Error saving to database:', dbError)
+      // Cleanup: hapus file dari storage jika gagal save ke database
+      await supabase.storage.from('media-files').remove([bucketPath])
       return NextResponse.json({ error: 'Failed to save file metadata' }, { status: 500 })
     }
 

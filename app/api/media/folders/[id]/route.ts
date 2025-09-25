@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
  * PUT - Update folder name
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -28,7 +29,7 @@ export async function PUT(
     const { data: existingFolder, error: checkError } = await supabase
       .from('media_folders')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (checkError || !existingFolder) {
@@ -41,7 +42,7 @@ export async function PUT(
       .select('id')
       .eq('name', name.trim())
       .eq('parent_id', existingFolder.parent_id)
-      .neq('id', params.id)
+      .neq('id', id)
       .single()
 
     if (duplicateFolder) {
@@ -52,7 +53,7 @@ export async function PUT(
     const { data: updatedFolder, error: updateError } = await supabase
       .from('media_folders')
       .update({ name: name.trim() })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -78,10 +79,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -93,7 +95,7 @@ export async function DELETE(
     const { data: folder, error: checkError } = await supabase
       .from('media_folders')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (checkError || !folder) {
@@ -104,7 +106,7 @@ export async function DELETE(
     const { data: subfolders, error: subfolderError } = await supabase
       .from('media_folders')
       .select('id')
-      .eq('parent_id', params.id)
+      .eq('parent_id', id)
       .limit(1)
 
     if (subfolderError) {
@@ -122,7 +124,7 @@ export async function DELETE(
     const { data: files, error: filesError } = await supabase
       .from('media_files')
       .select('id')
-      .eq('folder_id', params.id)
+      .eq('folder_id', id)
       .limit(1)
 
     if (filesError) {
@@ -140,7 +142,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('media_folders')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (deleteError) {
       console.error('Error deleting folder:', deleteError)

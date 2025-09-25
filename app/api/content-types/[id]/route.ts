@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
  * GET /api/content-types/[id]
@@ -7,11 +7,11 @@ import { createServiceClient } from '@/lib/supabase'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServiceClient()
-    const { id } = params
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     const { searchParams } = new URL(request.url)
     const includeFields = searchParams.get('include_fields') !== 'false' // default true
 
@@ -83,11 +83,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServiceClient()
-    const { id } = params
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     const body = await request.json()
 
     const { display_name, description, icon, is_active, fields } = body
@@ -195,11 +195,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServiceClient()
-    const { id } = params
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     const { searchParams } = new URL(request.url)
     const hardDelete = searchParams.get('hard') === 'true'
 

@@ -151,11 +151,11 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO content_type_fields (content_type_id, field_name, display_name, field_type, is_required, sort_order) 
 SELECT 
   ct.id,
-  field_name,
-  display_name,
-  field_type::field_type,
-  is_required,
-  sort_order
+  fields.field_name,
+  fields.display_name,
+  fields.field_type::field_type,
+  fields.is_required,
+  fields.sort_order
 FROM content_types ct,
 (VALUES 
   ('title', 'Title', 'text', true, 1),

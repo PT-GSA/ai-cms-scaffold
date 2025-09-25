@@ -231,16 +231,16 @@ export default function ContentTypesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 ml-6 mt-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Content Types</h1>
-            <p className="text-gray-400 mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Content Types</h1>
+            <p className="text-gray-400 mt-2 text-sm sm:text-base">
               Kelola struktur content untuk headless CMS Anda
             </p>
           </div>
-          <Button onClick={handleCreateNew}>
+          <Button onClick={handleCreateNew} className="w-full sm:w-auto mr-6">
             <Plus className="h-4 w-4 mr-2" />
             New Content Type
           </Button>
@@ -249,44 +249,44 @@ export default function ContentTypesPage() {
         {/* Content Types Grid */}
         {contentTypes.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">No Content Types</h3>
-              <p className="text-gray-400 text-center mb-4">
+            <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+              <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2 text-center">No Content Types</h3>
+              <p className="text-gray-400 text-center mb-4 text-sm sm:text-base max-w-md">
                 Belum ada content types. Buat content type pertama Anda untuk memulai.
               </p>
-              <Button onClick={handleCreateNew}>
+              <Button onClick={handleCreateNew} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Content Type
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {contentTypes.map((contentType) => {
               const IconComponent = getIconComponent(contentType.icon)
               
               return (
                 <Card key={contentType.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center space-x-2">
-                      <IconComponent className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg text-white">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <IconComponent className="h-5 w-5 text-primary flex-shrink-0" />
+                      <CardTitle className="text-base sm:text-lg text-white truncate">
                         {contentType.display_name}
                       </CardTitle>
                     </div>
-                    <Badge variant={contentType.is_active ? 'default' : 'secondary'}>
+                    <Badge variant={contentType.is_active ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
                       {contentType.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-sm text-gray-400 mb-2">
+                      <p className="text-sm text-gray-400 mb-2 line-clamp-2">
                         {contentType.description || 'No description'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        System name: <code className="bg-muted px-1 rounded">{contentType.name}</code>
+                      <p className="text-xs text-muted-foreground break-all">
+                        System name: <code className="bg-muted px-1 rounded text-xs">{contentType.name}</code>
                       </p>
                     </div>
 
@@ -297,18 +297,18 @@ export default function ContentTypesPage() {
                           Fields ({contentType.fields.length})
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {contentType.fields.slice(0, 3).map((field) => (
+                          {contentType.fields.slice(0, 2).map((field) => (
                             <Badge 
                               key={field.id} 
                               variant={getFieldTypeBadgeVariant(field.field_type)}
-                              className="text-xs"
+                              className="text-xs truncate max-w-full"
                             >
                               {field.display_name}
                             </Badge>
                           ))}
-                          {contentType.fields.length > 3 && (
+                          {contentType.fields.length > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{contentType.fields.length - 3} more
+                              +{contentType.fields.length - 2} more
                             </Badge>
                           )}
                         </div>
@@ -316,11 +316,11 @@ export default function ContentTypesPage() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="text-xs text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+                      <div className="text-xs text-muted-foreground order-2 sm:order-1">
                         Created: {contentType.created_at ? new Date(contentType.created_at).toLocaleDateString() : 'N/A'}
                       </div>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center justify-end space-x-1 order-1 sm:order-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -328,6 +328,7 @@ export default function ContentTypesPage() {
                             setSelectedContentType(contentType)
                             setShowDetailModal(true)
                           }}
+                          className="h-8 w-8 p-0"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -335,6 +336,7 @@ export default function ContentTypesPage() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleEdit(contentType)}
+                          className="h-8 w-8 p-0"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -345,7 +347,7 @@ export default function ContentTypesPage() {
                             setSelectedContentType(contentType)
                             setShowDeleteModal(true)
                           }}
-                          className="text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8 w-8 p-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -360,9 +362,9 @@ export default function ContentTypesPage() {
 
         {/* Create/Edit Form Modal */}
         <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingContentType ? 'Edit Content Type' : 'Create New Content Type'}
               </DialogTitle>
             </DialogHeader>
@@ -376,16 +378,17 @@ export default function ContentTypesPage() {
 
         {/* Detail Modal */}
         {showDetailModal && selectedContentType && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card p-4 sm:p-6 rounded-lg max-w-full sm:max-w-2xl w-full max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-lg sm:text-xl font-bold text-white truncate pr-4">
                   {selectedContentType.display_name} Details
                 </h2>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDetailModal(false)}
+                  className="h-8 w-8 p-0 flex-shrink-0"
                 >
                   ×
                 </Button>
@@ -394,18 +397,18 @@ export default function ContentTypesPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold text-white mb-2">Basic Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Name:</span>
-                      <p className="text-white">{selectedContentType.name}</p>
+                      <p className="text-white break-all">{selectedContentType.name}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Display Name:</span>
-                      <p className="text-white">{selectedContentType.display_name}</p>
+                      <p className="text-white break-words">{selectedContentType.display_name}</p>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <span className="text-muted-foreground">Description:</span>
-                      <p className="text-white">{selectedContentType.description || 'No description'}</p>
+                      <p className="text-white break-words">{selectedContentType.description || 'No description'}</p>
                     </div>
                   </div>
                 </div>
@@ -416,10 +419,10 @@ export default function ContentTypesPage() {
                     <div className="space-y-2">
                       {selectedContentType.fields.map((field) => (
                         <div key={field.id} className="border rounded p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-white">{field.display_name}</span>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={getFieldTypeBadgeVariant(field.field_type)}>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                            <span className="font-medium text-white break-words">{field.display_name}</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant={getFieldTypeBadgeVariant(field.field_type)} className="text-xs">
                                 {field.field_type}
                               </Badge>
                               {field.is_required && (
@@ -430,10 +433,10 @@ export default function ContentTypesPage() {
                               )}
                             </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            <p>Field name: <code>{field.field_name}</code></p>
-                            {field.help_text && <p>Help: {field.help_text}</p>}
-                            {field.default_value && <p>Default: {field.default_value}</p>}
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p className="break-all">Field name: <code className="text-xs">{field.field_name}</code></p>
+                            {field.help_text && <p className="break-words">Help: {field.help_text}</p>}
+                            {field.default_value && <p className="break-words">Default: {field.default_value}</p>}
                           </div>
                         </div>
                       ))}
@@ -447,23 +450,25 @@ export default function ContentTypesPage() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedContentType && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card p-6 rounded-lg max-w-md w-full mx-4">
-              <h2 className="text-xl font-bold text-white mb-4">Confirm Delete</h2>
-              <p className="text-gray-400 mb-6">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card p-4 sm:p-6 rounded-lg max-w-full sm:max-w-md w-full">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-4">Confirm Delete</h2>
+              <p className="text-gray-400 mb-6 text-sm sm:text-base break-words">
                 Are you sure you want to delete the content type &quot;{selectedContentType.display_name}&quot;? 
                 This action cannot be undone.
               </p>
-              <div className="flex justify-end space-x-4">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteModal(false)}
+                  className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDelete(selectedContentType)}
+                  className="w-full sm:w-auto order-1 sm:order-2"
                 >
                   Delete
                 </Button>

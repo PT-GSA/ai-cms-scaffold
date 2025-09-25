@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
-import { unlink } from 'fs/promises'
-import { join } from 'path'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
  * GET - Mengambil detail media file berdasarkan ID
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -22,7 +21,7 @@ export async function GET(
     const { data: mediaFile, error } = await supabase
       .from('media_files')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error) {
@@ -46,10 +45,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -64,7 +64,7 @@ export async function PUT(
     const { data: existingFile, error: checkError } = await supabase
       .from('media_files')
       .select('uploaded_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (checkError || !existingFile) {
@@ -83,7 +83,7 @@ export async function PUT(
         caption: caption || null,
         folder_id: folder_id || null
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -109,10 +109,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
     
     // Cek autentikasi
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -124,7 +125,7 @@ export async function DELETE(
     const { data: mediaFile, error: fetchError } = await supabase
       .from('media_files')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (fetchError || !mediaFile) {
@@ -139,20 +140,24 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('media_files')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (deleteError) {
       console.error('Error deleting from database:', deleteError)
       return NextResponse.json({ error: 'Failed to delete media file' }, { status: 500 })
     }
 
-    // Hapus file fisik dari disk
-    try {
-      const filePath = join(process.cwd(), 'public', mediaFile.file_path)
-      await unlink(filePath)
-    } catch (fileError) {
-      console.warn('Warning: Could not delete physical file:', fileError)
-      // Continue even if physical file deletion fails
+    // Hapus file dari Supabase Storage
+    if (mediaFile.storage_path) {
+      const { error: storageError } = await supabase.storage
+        .from('media-files')
+        .remove([mediaFile.storage_path])
+
+      if (storageError) {
+        console.error('Error deleting from storage:', storageError)
+        // File sudah dihapus dari database, tapi gagal dari storage
+        // Ini tidak fatal, file storage bisa dibersihkan manual nanti
+      }
     }
 
     return NextResponse.json({

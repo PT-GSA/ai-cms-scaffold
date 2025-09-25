@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 
 /**
  * GET /api/content-entries/[id]
@@ -7,16 +7,16 @@ import { createServiceClient } from '@/lib/supabase'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServiceClient()
-    const { id } = params
+    const { id } = await params
+    const supabase = createAdminSupabaseClient()
     const { searchParams } = new URL(request.url)
     const includeFields = searchParams.get('include_fields') === 'true'
 
     // Fetch content entry dengan atau tanpa field values
-    let query = supabase
+    const query = supabase
       .from('content_entries')
       .select(`
         id,
@@ -145,11 +145,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServiceClient()
-    const { id } = params
+    const { id } = await params
+    const supabase = createAdminSupabaseClient()
     const body = await request.json()
     
     const { title, slug, status, published_at, field_values } = body
@@ -311,11 +311,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServiceClient()
-    const { id } = params
+    const { id } = await params
+    const supabase = createAdminSupabaseClient()
 
     // Delete content entry (cascade akan menghapus field values)
     const { error } = await supabase

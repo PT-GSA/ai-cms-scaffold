@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 
 /**
  * GET /api/content-types
- * Mengambil semua content types yang tersedia
+ * Mengambil daftar content types dengan opsi untuk include fields
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServiceClient()
+    const supabase = createAdminSupabaseClient()
     const { searchParams } = new URL(request.url)
     const includeFields = searchParams.get('include_fields') === 'true'
 
-    let query = supabase
+    const query = supabase
       .from('content_types')
-      .select(`
+      .select(` 
         id,
         name,
         display_name,
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServiceClient()
+    const supabase = await createServerSupabaseClient()
     const body = await request.json()
 
     // Validasi input
@@ -94,6 +95,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
     // Insert content type
     const { data: contentType, error: contentTypeError } = await supabase
       .from('content_types')
@@ -101,7 +112,8 @@ export async function POST(request: NextRequest) {
         name,
         display_name,
         description: description || null,
-        icon: icon || 'File'
+        icon: icon || 'File',
+        created_by: user.id
       })
       .select()
       .single()

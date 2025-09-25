@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS content_entry_versions (
   UNIQUE(content_entry_id, version_number)
 );
 
+-- Enable pg_trgm extension untuk text search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- Indexes untuk performance
 CREATE INDEX IF NOT EXISTS idx_content_entries_content_type_id ON content_entries(content_type_id);
 CREATE INDEX IF NOT EXISTS idx_content_entries_status ON content_entries(status);
@@ -74,6 +77,14 @@ ALTER TABLE content_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE content_entry_values ENABLE ROW LEVEL SECURITY;
 ALTER TABLE content_entry_versions ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view published content entries" ON content_entries;
+DROP POLICY IF EXISTS "Users can create content entries" ON content_entries;
+DROP POLICY IF EXISTS "Users can create their own content entries" ON content_entries;
+DROP POLICY IF EXISTS "Users can update their content entries" ON content_entries;
+DROP POLICY IF EXISTS "Users can update their own content entries" ON content_entries;
+DROP POLICY IF EXISTS "Users can delete their own content entries" ON content_entries;
+
 -- Policy untuk content_entries
 CREATE POLICY "Users can view published content entries" ON content_entries
   FOR SELECT USING (status = 'published' OR auth.uid() = created_by);
@@ -88,6 +99,9 @@ CREATE POLICY "Users can delete their own content entries" ON content_entries
   FOR DELETE USING (auth.uid() = created_by);
 
 -- Policy untuk content_entry_values
+DROP POLICY IF EXISTS "Users can view content entry values" ON content_entry_values;
+DROP POLICY IF EXISTS "Users can manage content entry values" ON content_entry_values;
+
 CREATE POLICY "Users can view content entry values" ON content_entry_values
   FOR SELECT USING (
     EXISTS (
@@ -107,6 +121,9 @@ CREATE POLICY "Users can manage content entry values" ON content_entry_values
   );
 
 -- Policy untuk content_entry_versions
+DROP POLICY IF EXISTS "Users can view content entry versions" ON content_entry_versions;
+DROP POLICY IF EXISTS "Users can manage content entry versions" ON content_entry_versions;
+
 CREATE POLICY "Users can view content entry versions" ON content_entry_versions
   FOR SELECT USING (
     EXISTS (
@@ -134,10 +151,12 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_content_entries_updated_at ON content_entries;
 CREATE TRIGGER update_content_entries_updated_at 
   BEFORE UPDATE ON content_entries 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_content_entry_values_updated_at ON content_entry_values;
 CREATE TRIGGER update_content_entry_values_updated_at 
   BEFORE UPDATE ON content_entry_values 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -241,8 +260,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger untuk auto-versioning
+DROP TRIGGER IF EXISTS create_content_entry_version_trigger ON content_entries;
 CREATE TRIGGER create_content_entry_version_trigger
   AFTER UPDATE ON content_entries
   FOR EACH ROW
-  WHEN (OLD.status != NEW.status OR OLD.title != NEW.title)
   EXECUTE FUNCTION create_content_entry_version();
