@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { data: files, error: filesError } = await supabase
       .from('media_files')
       .select('id, file_size')
-      .eq('user_id', user.id)
+      .eq('uploaded_by', user.id)
 
     if (filesError) {
       console.error('Error fetching user files:', filesError)

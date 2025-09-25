@@ -79,12 +79,15 @@ vercel --prod
    - Install Command: `bun install`
 
 3. **Set Environment Variables**
+   Di Vercel Dashboard > Project Settings > Environment Variables, tambahkan:
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    NODE_ENV=production
    ```
+   
+   **PENTING**: Pastikan semua environment variables diset untuk environment "Production", "Preview", dan "Development".
 
 4. **Deploy**
    - Click "Deploy"
