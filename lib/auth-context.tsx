@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const getSession = async () => {
       try {
+        console.log("[v0] Getting initial session...")
         const {
           data: { session },
           error,
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null)
           setUser(null)
         } else {
+          console.log("[v0] Initial session:", !!session)
           setSession(session)
           setUser(session?.user ?? null)
         }
@@ -56,30 +58,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[v0] Auth state changed:", event)
+      console.log("[v0] Auth state changed:", event, !!session)
 
-      setSession((prevSession) => {
-        if (prevSession?.access_token !== session?.access_token) {
-          return session
-        }
-        return prevSession
-      })
-
-      setUser((prevUser) => {
-        const newUser = session?.user ?? null
-        if (prevUser?.id !== newUser?.id) {
-          return newUser
-        }
-        return prevUser
-      })
-
-      if (loading) {
-        setLoading(false)
-      }
+      setSession(session)
+      setUser(session?.user ?? null)
+      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
-  }, [loading]) // Add loading to dependency array
+  }, []) // Removed loading from dependency array to prevent infinite loop
 
   return <AuthContext.Provider value={{ user, session, loading, signOut }}>{children}</AuthContext.Provider>
 }
