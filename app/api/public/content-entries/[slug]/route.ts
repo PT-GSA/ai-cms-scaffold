@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Public API untuk frontend consumer - tidak memerlukan autentikasi
+// Public API untuk frontend consumer - menggunakan service role key untuk akses penuh
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 /**
@@ -36,13 +36,17 @@ export async function GET(
       );
     }
 
-    // Ambil content type berdasarkan slug
+    // Ambil content type berdasarkan name (karena tidak ada kolom slug)
     const { data: contentTypeData, error: contentTypeError } = await supabase
       .from('content_types')
-      .select('id, name, slug, schema')
-      .eq('slug', contentType)
+      .select('id, name, display_name')
+      .eq('name', contentType)
       .eq('is_active', true)
       .single();
+
+    console.log('Single entry - Content type requested:', contentType);
+    console.log('Single entry - Content type data:', contentTypeData);
+    console.log('Single entry - Content type error:', contentTypeError);
 
     if (contentTypeError || !contentTypeData) {
       return NextResponse.json(
@@ -56,9 +60,8 @@ export async function GET(
       .from('content_entries')
       .select(`
         id,
-        title,
         slug,
-        content,
+        data,
         status,
         created_at,
         updated_at,
@@ -68,6 +71,10 @@ export async function GET(
       .eq('slug', slug)
       .eq('status', 'published')
       .single();
+
+    console.log('Single entry - Entry slug requested:', slug);
+    console.log('Single entry - Entry data:', entry);
+    console.log('Single entry - Entry error:', entryError);
 
     if (entryError || !entry) {
       return NextResponse.json(
@@ -82,8 +89,7 @@ export async function GET(
         content_type: {
           id: contentTypeData.id,
           name: contentTypeData.name,
-          slug: contentTypeData.slug,
-          schema: contentTypeData.schema
+          display_name: contentTypeData.display_name
         }
       }
     });

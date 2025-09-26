@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Public API untuk frontend consumer - tidak memerlukan autentikasi
+// Public API untuk frontend consumer - menggunakan service role key untuk bypass RLS
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 /**
@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort') || 'created_at';
     const order = searchParams.get('order') || 'desc';
 
+    console.log('Content type requested:', contentType);
+
     if (!contentType) {
       return NextResponse.json(
         { error: 'content_type parameter is required' },
@@ -35,13 +37,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Ambil content type berdasarkan slug
+    // Ambil content type berdasarkan name (karena tidak ada kolom slug)
     const { data: contentTypeData, error: contentTypeError } = await supabase
       .from('content_types')
-      .select('id, name, slug, schema')
-      .eq('slug', contentType)
+      .select('id, name, display_name')
+      .eq('name', contentType)
       .eq('is_active', true)
       .single();
+
+    console.log('Content type data:', contentTypeData);
+    console.log('Content type error:', contentTypeError);
 
     if (contentTypeError || !contentTypeData) {
       return NextResponse.json(
@@ -55,13 +60,13 @@ export async function GET(request: NextRequest) {
       .from('content_entries')
       .select(`
         id,
-        title,
         slug,
-        content,
         status,
+        data,
+        meta_data,
+        published_at,
         created_at,
-        updated_at,
-        published_at
+        updated_at
       `)
       .eq('content_type_id', contentTypeData.id)
       .eq('status', status)
@@ -98,8 +103,8 @@ export async function GET(request: NextRequest) {
         content_type: {
           id: contentTypeData.id,
           name: contentTypeData.name,
-          slug: contentTypeData.slug,
-          schema: contentTypeData.schema
+          slug: contentTypeData.name, // Gunakan name sebagai slug
+          display_name: contentTypeData.display_name
         }
       }
     });
