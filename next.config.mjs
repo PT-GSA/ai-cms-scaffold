@@ -26,6 +26,14 @@ const nextConfig = {
       '@supabase/supabase-js',
     ],
   },
+
+  // Caching configuration untuk mengatasi masalah refresh
+  onDemandEntries: {
+    // Period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // Number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
   
   // Webpack configuration
   webpack: (config, { isServer }) => {
@@ -45,6 +53,15 @@ const nextConfig = {
   // Headers for security and performance
   async headers() {
     return [
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
       {
         source: '/(.*)',
         headers: [

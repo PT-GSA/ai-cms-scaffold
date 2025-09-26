@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [loading]) // Add loading to dependency array
+  }, []) // Remove loading from dependency array to prevent infinite loop
 
   return <AuthContext.Provider value={{ user, session, loading, signOut }}>{children}</AuthContext.Provider>
 }
