@@ -9,7 +9,7 @@ interface MediaFile {
  * API endpoint untuk mendapatkan informasi storage usage per user
  * GET /api/storage - Mengembalikan storage usage dan quota user
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createServerSupabaseClient()
     
@@ -42,9 +42,7 @@ export async function GET(request: NextRequest) {
       return total + (file.file_size || 0)
     }, 0) || 0
 
-    // Konversi ke GB dan MB untuk display
-    const totalUsedMB = totalUsedBytes / (1024 * 1024)
-    const totalUsedGB = totalUsedBytes / (1024 * 1024 * 1024)
+    // Konversi ke GB dan MB untuk display (calculated in formatSize function)
     
     // Storage quota per user (2GB)
     const quotaBytes = 2 * 1024 * 1024 * 1024 // 2GB dalam bytes

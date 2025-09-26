@@ -8,7 +8,7 @@ interface WebhookPayload {
   content_type: string;
   content_id: string;
   slug?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -21,7 +21,7 @@ export async function triggerContentWebhook(
   contentId: string,
   options: {
     slug?: string;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
   } = {}
 ): Promise<void> {
   try {
@@ -59,19 +59,19 @@ export async function triggerContentCreated(
   contentType: string,
   contentId: string,
   slug?: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<void> {
   await triggerContentWebhook('content.created', contentType, contentId, { slug, data });
 }
 
 /**
- * Trigger webhook ketika content diupdate
+ * Trigger webhook untuk content updated
  */
 export async function triggerContentUpdated(
   contentType: string,
   contentId: string,
   slug?: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<void> {
   await triggerContentWebhook('content.updated', contentType, contentId, { slug, data });
 }
@@ -94,13 +94,13 @@ export async function triggerContentPublished(
   contentType: string,
   contentId: string,
   slug?: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<void> {
   await triggerContentWebhook('content.published', contentType, contentId, { slug, data });
 }
 
 /**
- * Batch trigger webhooks untuk multiple content
+ * Trigger multiple webhooks dalam batch
  */
 export async function triggerBatchWebhooks(
   webhooks: Array<{
@@ -108,7 +108,7 @@ export async function triggerBatchWebhooks(
     contentType: string;
     contentId: string;
     slug?: string;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
   }>
 ): Promise<void> {
   const promises = webhooks.map(webhook =>

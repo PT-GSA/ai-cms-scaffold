@@ -1,5 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import { withContentSanitization, getSanitizedBody } from '@/lib/input-sanitizer-middleware'
+
+// Type definitions
+interface ContentTypeField {
+  id: string
+  field_name: string
+  field_type: string
+  display_name: string
+  is_required?: boolean
+}
+
+interface ContentEntryValue {
+  id: string
+  content_type_field_id: string
+  text_value: string | null
+  number_value: number | null
+  boolean_value: boolean | null
+  date_value: string | null
+  datetime_value: string | null
+  json_value: unknown | null
+  content_type_fields: ContentTypeField
+}
+
+interface ContentType {
+  id: string
+  name: string
+  display_name: string
+  icon: string | null
+  content_type_fields?: ContentTypeField[]
+}
+
+interface ContentEntryData {
+  id: string
+  content_type_id: string
+  title: string
+  slug: string
+  status: string
+  published_at: string | null
+  created_by: string
+  updated_by: string
+  created_at: string
+  updated_at: string
+  content_types: ContentType
+  content_entry_values?: ContentEntryValue[]
+}
 
 /**
  * GET /api/content-entries/[id]
@@ -74,8 +119,8 @@ export async function GET(
     // Transform field values jika includeFields true
     if (includeFields && data && 'content_entry_values' in data && Array.isArray(data.content_entry_values)) {
       const fieldValues: Record<string, unknown> = {}
-      
-      data.content_entry_values.forEach((value: any) => {
+
+      data.content_entry_values.forEach((value: ContentEntryValue) => {
         const fieldName = value.content_type_fields.field_name
         const fieldType = value.content_type_fields.field_type
         
@@ -114,7 +159,7 @@ export async function GET(
       
       // Create transformed data object
       const transformedData = {
-        ...(data as any),
+        ...(data as unknown as ContentEntryData),
         field_values: fieldValues
       }
       delete transformedData.content_entry_values
@@ -139,18 +184,34 @@ export async function GET(
   }
 }
 
+// Export handlers with sanitization
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // Buat wrapper untuk sanitization
+  const sanitizedHandler = withContentSanitization(async (req: NextRequest) => {
+    return putHandler(req, { params });
+  });
+  
+  return sanitizedHandler(request);
+}
+
 /**
  * PUT /api/content-entries/[id]
  * Update content entry berdasarkan ID
  */
-export async function PUT(
+async function putHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const supabase = createAdminSupabaseClient()
-    const body = await request.json()
+    
+    // Gunakan sanitized body jika tersedia
+    const sanitizedBody = getSanitizedBody(request);
+    const body = sanitizedBody || await request.json()
     
     const { title, slug, status, published_at, field_values } = body
 
@@ -212,9 +273,9 @@ export async function PUT(
     if (field_values && Object.keys(field_values).length > 0) {
       // Get field definitions
       const fieldMap = new Map()
-      const contentType = entry.content_types as any
+      const contentType = entry.content_types as unknown as ContentType
       if (contentType && contentType.content_type_fields) {
-        contentType.content_type_fields.forEach((field: any) => {
+        contentType.content_type_fields.forEach((field: ContentTypeField) => {
           fieldMap.set(field.field_name, field)
         })
       }

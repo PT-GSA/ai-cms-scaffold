@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 CORS Configuration Test</h1>
+        <p>Test ini akan menguji konfigurasi CORS untuk API endpoints yang tersedia.</p>
+        
+        <div class="test-section info">
+            <h3>📋 Test Configuration</h3>
+            <p><strong>Base URL:</strong> <span id="baseUrl">http://localhost:3000</span></p>
+            <p><strong>Origin:</strong> <span id="currentOrigin"></span></p>
+            <input type="text" id="customUrl" placeholder="Custom API URL (optional)" style="width: 300px; padding: 5px;">
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test Public API Endpoints</h3>
+            <button onclick="testEndpoint('/api/public/content-types', 'GET')">Test Content Types</button>
+            <button onclick="testEndpoint('/api/public/content-entries', 'GET')">Test Content Entries</button>
+            <button onclick="testEndpoint('/api/public/media', 'GET')">Test Media</button>
+            <button onclick="testPreflightRequest('/api/public/content-types')">Test Preflight (OPTIONS)</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔒 Test Protected API Endpoints</h3>
+            <button onclick="testEndpoint('/api/content-types', 'GET')">Test Protected Content Types</button>
+            <button onclick="testEndpoint('/api/media/folders', 'GET')">Test Media Folders</button>
+            <p><small>⚠️ Protected endpoints memerlukan authentication</small></p>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Set current origin
+        document.getElementById('currentOrigin').textContent = window.location.origin;
+        
+        function getBaseUrl() {
+            const customUrl = document.getElementById('customUrl').value.trim();
+            return customUrl || document.getElementById('baseUrl').textContent;
+        }
+
+        function addResult(endpoint, method, success, details) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-section ${success ? 'success' : 'error'}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            resultDiv.innerHTML = `
+                <h4>${success ? '✅' : '❌'} ${method} ${endpoint}</h4>
+                <p><strong>Time:</strong> ${timestamp}</p>
+                <p><strong>Status:</strong> ${success ? 'Success' : 'Failed'}</p>
+                <pre>${JSON.stringify(details, null, 2)}</pre>
+            `;
+            
+            resultsDiv.insertBefore(resultDiv, resultsDiv.firstChild);
+        }
+
+        async function testEndpoint(endpoint, method = 'GET') {
+            const baseUrl = getBaseUrl();
+            const url = `${baseUrl}${endpoint}`;
+            
+            try {
+                console.log(`Testing ${method} ${url}`);
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    credentials: 'include'
+                });
+
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials'),
+                    'Access-Control-Max-Age': response.headers.get('Access-Control-Max-Age'),
+                    'Vary': response.headers.get('Vary')
+                };
+
+                let responseData;
+                try {
+                    responseData = await response.json();
+                } catch (e) {
+                    responseData = await response.text();
+                }
+
+                const details = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    corsHeaders: corsHeaders,
+                    responsePreview: typeof responseData === 'string' 
+                        ? responseData.substring(0, 200) + (responseData.length > 200 ? '...' : '')
+                        : responseData
+                };
+
+                addResult(endpoint, method, response.ok, details);
+                
+            } catch (error) {
+                console.error(`Error testing ${method} ${url}:`, error);
+                addResult(endpoint, method, false, {
+                    error: error.message,
+                    type: error.name
+                });
+            }
+        }
+
+        async function testPreflightRequest(endpoint) {
+            const baseUrl = getBaseUrl();
+            const url = `${baseUrl}${endpoint}`;
+            
+            try {
+                console.log(`Testing OPTIONS (preflight) ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'Content-Type, Authorization'
+                    }
+                });
+
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials'),
+                    'Access-Control-Max-Age': response.headers.get('Access-Control-Max-Age'),
+                    'Vary': response.headers.get('Vary')
+                };
+
+                const details = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    corsHeaders: corsHeaders,
+                    note: 'Preflight request untuk mengecek CORS policy'
+                };
+
+                addResult(endpoint, 'OPTIONS', response.ok, details);
+                
+            } catch (error) {
+                console.error(`Error testing OPTIONS ${url}:`, error);
+                addResult(endpoint, 'OPTIONS', false, {
+                    error: error.message,
+                    type: error.name
+                });
+            }
+        }
+
+        // Auto-test saat halaman dimuat
+        window.addEventListener('load', () => {
+            console.log('CORS Test Page loaded');
+            console.log('Current origin:', window.location.origin);
+        });
+    </script>
+</body>
+</html>

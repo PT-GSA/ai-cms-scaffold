@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { withRateLimit, strictRateLimit } from '@/lib/rate-limit-middleware';
 
 /**
  * POST /api/revalidate
  * API endpoint untuk trigger ISR revalidation
  * Digunakan untuk invalidate cache ketika content berubah
+ * Rate limited untuk mencegah abuse
  */
-export async function POST(request: NextRequest) {
+async function handleRevalidatePost(request: NextRequest) {
   try {
     // Validasi secret token untuk keamanan
     const authHeader = request.headers.get('authorization');
@@ -117,3 +119,8 @@ export async function GET() {
     timestamp: new Date().toISOString()
   });
 }
+
+/**
+ * Export POST dengan rate limiting
+ */
+export const POST = withRateLimit(handleRevalidatePost, strictRateLimit);

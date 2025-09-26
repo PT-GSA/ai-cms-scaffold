@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ComponentType } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { 
-  Plus, 
   Search, 
   Eye, 
   Download,
@@ -21,7 +20,6 @@ import {
   Package,
   Grid,
   List,
-  Filter,
   Star,
   Clock,
   User,
@@ -40,13 +38,98 @@ interface Template {
   name: string
   description: string
   content_type: ContentType
-  preview_data: Record<string, any>
+  preview_data: Record<string, unknown>
   tags: string[]
   is_featured: boolean
   usage_count: number
   created_at: string
   created_by: string
 }
+
+// Mock data untuk template library
+const mockTemplates: Template[] = [
+  {
+    id: '1',
+    name: 'Blog Article Template',
+    description: 'Template untuk artikel blog dengan struktur lengkap termasuk meta description, featured image, dan content sections.',
+    content_type: { id: '1', name: 'article', display_name: 'Article', icon: 'FileText' },
+    preview_data: {
+      title: 'How to Build Amazing Web Applications',
+      meta_description: 'Learn the best practices for building modern web applications with React and Next.js',
+      featured_image: '/placeholder.jpg',
+      content: 'This is a comprehensive guide to building web applications...',
+      tags: ['web development', 'react', 'nextjs']
+    },
+    tags: ['blog', 'article', 'content'],
+    is_featured: true,
+    usage_count: 45,
+    created_at: '2024-01-15T10:00:00Z',
+    created_by: 'Admin'
+  },
+  {
+    id: '2',
+    name: 'Product Page Template',
+    description: 'Template untuk halaman produk e-commerce dengan spesifikasi, galeri gambar, dan call-to-action.',
+    content_type: { id: '2', name: 'page', display_name: 'Page', icon: 'File' },
+    preview_data: {
+      title: 'Premium Wireless Headphones',
+      description: 'Experience crystal-clear audio with our premium wireless headphones',
+      price: '$199.99',
+      specifications: {
+        battery: '30 hours',
+        connectivity: 'Bluetooth 5.0',
+        weight: '250g'
+      },
+      gallery: ['/placeholder.jpg', '/placeholder.jpg']
+    },
+    tags: ['ecommerce', 'product', 'page'],
+    is_featured: true,
+    usage_count: 32,
+    created_at: '2024-01-10T14:30:00Z',
+    created_by: 'Admin'
+  },
+  {
+    id: '3',
+    name: 'Company About Page',
+    description: 'Template untuk halaman tentang perusahaan dengan visi, misi, dan team members.',
+    content_type: { id: '2', name: 'page', display_name: 'Page', icon: 'File' },
+    preview_data: {
+      title: 'About Our Company',
+      hero_text: 'We are passionate about creating innovative solutions',
+      vision: 'To be the leading technology company in our industry',
+      mission: 'Delivering exceptional products that make a difference',
+      team_members: [
+        { name: 'John Doe', position: 'CEO', bio: 'Experienced leader...' }
+      ]
+    },
+    tags: ['company', 'about', 'corporate'],
+    is_featured: false,
+    usage_count: 18,
+    created_at: '2024-01-05T09:15:00Z',
+    created_by: 'Admin'
+  },
+  {
+    id: '4',
+    name: 'Event Landing Page',
+    description: 'Template untuk halaman landing event dengan countdown timer, speaker list, dan registration form.',
+    content_type: { id: '2', name: 'page', display_name: 'Page', icon: 'File' },
+    preview_data: {
+      title: 'Tech Conference 2024',
+      event_date: '2024-06-15',
+      location: 'Jakarta Convention Center',
+      description: 'Join us for the biggest tech conference of the year',
+      speakers: [
+        { name: 'Jane Smith', company: 'Tech Corp', topic: 'AI in Web Development' }
+      ],
+      ticket_price: '$99'
+    },
+    tags: ['event', 'landing', 'conference'],
+    is_featured: false,
+    usage_count: 12,
+    created_at: '2024-01-01T16:45:00Z',
+    created_by: 'Admin'
+  }
+]
 
 /**
  * Halaman Template Library
@@ -66,90 +149,7 @@ export default function TemplateLibraryPage() {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
 
-  // Mock data untuk template library
-  const mockTemplates: Template[] = [
-    {
-      id: '1',
-      name: 'Blog Article Template',
-      description: 'Template untuk artikel blog dengan struktur lengkap termasuk meta description, featured image, dan content sections.',
-      content_type: { id: '1', name: 'article', display_name: 'Article', icon: 'FileText' },
-      preview_data: {
-        title: 'How to Build Amazing Web Applications',
-        meta_description: 'Learn the best practices for building modern web applications with React and Next.js',
-        featured_image: '/placeholder.jpg',
-        content: 'This is a comprehensive guide to building web applications...',
-        tags: ['web development', 'react', 'nextjs']
-      },
-      tags: ['blog', 'article', 'content'],
-      is_featured: true,
-      usage_count: 45,
-      created_at: '2024-01-15T10:00:00Z',
-      created_by: 'Admin'
-    },
-    {
-      id: '2',
-      name: 'Product Page Template',
-      description: 'Template untuk halaman produk e-commerce dengan spesifikasi, galeri gambar, dan call-to-action.',
-      content_type: { id: '2', name: 'page', display_name: 'Page', icon: 'File' },
-      preview_data: {
-        title: 'Premium Wireless Headphones',
-        description: 'Experience crystal-clear audio with our premium wireless headphones',
-        price: '$199.99',
-        specifications: {
-          battery: '30 hours',
-          connectivity: 'Bluetooth 5.0',
-          weight: '250g'
-        },
-        gallery: ['/placeholder.jpg', '/placeholder.jpg']
-      },
-      tags: ['ecommerce', 'product', 'page'],
-      is_featured: true,
-      usage_count: 32,
-      created_at: '2024-01-10T14:30:00Z',
-      created_by: 'Admin'
-    },
-    {
-      id: '3',
-      name: 'Company About Page',
-      description: 'Template untuk halaman tentang perusahaan dengan visi, misi, dan team members.',
-      content_type: { id: '2', name: 'page', display_name: 'Page', icon: 'File' },
-      preview_data: {
-        title: 'About Our Company',
-        hero_text: 'We are passionate about creating innovative solutions',
-        vision: 'To be the leading technology company in our industry',
-        mission: 'Delivering exceptional products that make a difference',
-        team_members: [
-          { name: 'John Doe', position: 'CEO', bio: 'Experienced leader...' }
-        ]
-      },
-      tags: ['company', 'about', 'corporate'],
-      is_featured: false,
-      usage_count: 18,
-      created_at: '2024-01-05T09:15:00Z',
-      created_by: 'Admin'
-    },
-    {
-      id: '4',
-      name: 'Event Landing Page',
-      description: 'Template untuk halaman landing event dengan countdown timer, speaker list, dan registration form.',
-      content_type: { id: '2', name: 'page', display_name: 'Page', icon: 'File' },
-      preview_data: {
-        title: 'Tech Conference 2024',
-        event_date: '2024-06-15',
-        location: 'Jakarta Convention Center',
-        description: 'Join us for the biggest tech conference of the year',
-        speakers: [
-          { name: 'Jane Smith', company: 'Tech Corp', topic: 'AI in Web Development' }
-        ],
-        ticket_price: '$99'
-      },
-      tags: ['event', 'landing', 'conference'],
-      is_featured: false,
-      usage_count: 12,
-      created_at: '2024-01-01T16:45:00Z',
-      created_by: 'Admin'
-    }
-  ]
+
 
   /**
    * Load templates dan content types
@@ -233,7 +233,7 @@ export default function TemplateLibraryPage() {
    * Get icon component berdasarkan nama icon
    */
   const getIconComponent = (iconName: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, ComponentType<{ className?: string }>> = {
       FileText,
       File,
       Package,
@@ -245,6 +245,7 @@ export default function TemplateLibraryPage() {
 
   if (loading) {
     return (
+      
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">

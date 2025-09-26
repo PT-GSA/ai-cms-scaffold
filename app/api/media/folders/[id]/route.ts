@@ -37,7 +37,7 @@ export async function PUT(
     }
 
     // Cek apakah folder dengan nama yang sama sudah ada di parent yang sama
-    const { data: duplicateFolder, error: duplicateError } = await supabase
+    const { data: duplicateFolder } = await supabase
       .from('media_folders')
       .select('id')
       .eq('name', name.trim())

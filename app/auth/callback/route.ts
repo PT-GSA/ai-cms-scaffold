@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { withRateLimit, authRateLimit } from "@/lib/rate-limit-middleware"
 
-export async function GET(request: NextRequest) {
+/**
+ * GET /auth/callback
+ * Handle authentication callback dari Supabase Auth
+ * Rate limited untuk mencegah abuse
+ */
+async function handleAuthCallback(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
   const next = searchParams.get("next") ?? "/dashboard"
@@ -15,10 +21,12 @@ export async function GET(request: NextRequest) {
           get(name: string) {
             return request.cookies.get(name)?.value
           },
-          set(name: string, value: string, options: any) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          set(_name: string, _value: string, _options: unknown) {
             // This will be handled by the response
           },
-          remove(name: string, options: any) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          remove(_name: string, _options: unknown) {
             // This will be handled by the response
           },
         },
@@ -42,5 +50,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/login?error=auth_error`)
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }
+
+// Export rate-limited GET handler
+export const GET = withRateLimit(handleAuthCallback, authRateLimit)

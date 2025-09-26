@@ -86,6 +86,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               isActive={pathname === "/dashboard/content-entries"}
             />
             <SidebarItem
+              // eslint-disable-next-line jsx-a11y/alt-text
               icon={<Image className="h-5 w-5" />}
               label="Media Gallery"
               href="/dashboard/media"

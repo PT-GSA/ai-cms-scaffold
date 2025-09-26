@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import { withInputSanitization, getSanitizedBody } from '@/lib/input-sanitizer-middleware'
 
 /**
  * GET /api/content-types
@@ -53,14 +54,20 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Export handlers with sanitization
+export const POST = withInputSanitization(postHandler);
+
 /**
  * POST /api/content-types
- * Membuat content type baru
+ * Membuat content type baru dengan fields
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
-    const body = await request.json()
+    
+    // Gunakan sanitized body jika tersedia
+    const sanitizedBody = getSanitizedBody(request);
+    const body = sanitizedBody || await request.json()
 
     // Validasi input
     const { name, display_name, description, icon, fields } = body

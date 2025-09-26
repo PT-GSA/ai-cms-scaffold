@@ -69,19 +69,22 @@ export function MediaUpload({
    * Get icon berdasarkan file type
    */
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <Image className="w-8 h-8" />
-    if (mimeType.startsWith('video/')) return <Video className="w-8 h-8" />
-    if (mimeType.startsWith('audio/')) return <Music className="w-8 h-8" />
-    if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text')) {
-      return <FileText className="w-8 h-8" />
+    if (mimeType.startsWith('image/')) {
+      // eslint-disable-next-line jsx-a11y/alt-text
+      return <Image className="w-8 h-8" aria-hidden="true" />
     }
-    return <File className="w-8 h-8" />
+    if (mimeType.startsWith('video/')) return <Video className="w-8 h-8" aria-hidden="true" />
+    if (mimeType.startsWith('audio/')) return <Music className="w-8 h-8" aria-hidden="true" />
+    if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text')) {
+      return <FileText className="w-8 h-8" aria-hidden="true" />
+    }
+    return <File className="w-8 h-8" aria-hidden="true" />
   }
 
   /**
    * Validasi file
    */
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     if (file.size > maxSize) {
       return `File ${file.name} terlalu besar. Maksimal ${formatFileSize(maxSize)}`
     }
@@ -99,7 +102,7 @@ export function MediaUpload({
     }
 
     return null
-  }
+  }, [maxSize, accept])
 
   /**
    * Handle file selection
@@ -135,7 +138,7 @@ export function MediaUpload({
         setSelectedFiles([validFiles[0]])
       }
     }
-  }, [multiple, maxSize, accept, toast])
+  }, [multiple, validateFile, toast])
 
   /**
    * Handle drag events

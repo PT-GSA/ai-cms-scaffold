@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Query content entries
-    let query = supabase
+    const query = supabase
       .from('content_entries')
       .select(`
         id,

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit, Trash2, FileText, File, Package, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,7 +54,7 @@ export default function ContentTypesPage() {
   /**
    * Fetch content types dari API
    */
-  const fetchContentTypes = async () => {
+  const fetchContentTypes = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/content-types?include_fields=true')
@@ -75,7 +75,7 @@ export default function ContentTypesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   /**
    * Handle create new content type
@@ -214,7 +214,7 @@ export default function ContentTypesPage() {
   // Load content types on component mount
   useEffect(() => {
     fetchContentTypes()
-  }, [])
+  }, [fetchContentTypes])
 
   if (loading) {
     return (

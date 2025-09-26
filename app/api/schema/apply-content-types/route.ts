@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { withCors } from '@/lib/cors'
 
 /**
  * POST /api/schema/apply-content-types
  * Menjalankan SQL schema untuk content types melalui Supabase
  */
-export async function POST(request: NextRequest) {
+async function postHandler() {
   try {
     const supabase = createServiceClient()
 
@@ -241,3 +242,6 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// Export dengan CORS support
+export const POST = withCors(postHandler);

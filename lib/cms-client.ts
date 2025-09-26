@@ -8,7 +8,7 @@ export interface ContentType {
   name: string;
   slug: string;
   description?: string;
-  schema: Record<string, any>;
+  schema: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -17,7 +17,7 @@ export interface ContentEntry {
   id: string;
   title: string;
   slug: string;
-  content: Record<string, any>;
+  content: Record<string, unknown>;
   status: 'published' | 'draft' | 'archived';
   created_at: string;
   updated_at: string;

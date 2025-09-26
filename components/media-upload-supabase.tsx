@@ -258,7 +258,10 @@ export default function MediaUploadSupabase({
    * Get file type icon
    */
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return <Image className="h-4 w-4" />
+    if (file.type.startsWith('image/')) {
+      // eslint-disable-next-line jsx-a11y/alt-text
+      return <Image className="h-4 w-4" />
+    }
     if (file.type.startsWith('video/')) return <Video className="h-4 w-4" />
     if (file.type.startsWith('audio/')) return <Music className="h-4 w-4" />
     if (file.type.includes('pdf') || file.type.includes('document') || file.type.includes('text')) {

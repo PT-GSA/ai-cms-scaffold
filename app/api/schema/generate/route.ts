@@ -2,6 +2,26 @@ import { type NextRequest, NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { z } from "zod"
+import { withRateLimit, strictRateLimit } from "@/lib/rate-limit-middleware"
+
+// Type definitions
+interface SchemaColumn {
+  name: string
+  type: string
+  nullable: boolean
+  primary_key?: boolean
+  unique?: boolean
+  default?: string | null
+}
+
+interface SchemaTable {
+  name: string
+  columns: SchemaColumn[]
+}
+
+interface GeneratedSchema {
+  tables: SchemaTable[]
+}
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -68,7 +88,12 @@ const SchemaRequestSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
 })
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/schema/generate
+ * Generate database schema dari deskripsi natural language
+ * Rate limited untuk mencegah abuse AI API
+ */
+async function handleSchemaGenerate(request: NextRequest) {
   try {
     console.log('🚀 Schema generation request received')
     
@@ -154,7 +179,7 @@ Requirements:
 Generate the schema now:
 `
 
-    let schemaJson
+    let schemaJson: GeneratedSchema
     try {
       console.log('🔄 Calling Gemini API...')
       const result = await model.generateContent(prompt)
@@ -201,21 +226,33 @@ Generate the schema now:
           return NextResponse.json({ error: "Invalid JSON response from AI" }, { status: 500 })
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Gemini API error:', error)
       
+      // Type guard for API error
+      const isApiError = (err: unknown): err is { status: number; message?: string } => {
+        return (
+          typeof err === 'object' &&
+          err !== null &&
+          'status' in err &&
+          typeof (err as Record<string, unknown>).status === 'number'
+        );
+      };
+
+      const apiError = error as { status?: number; message?: string };
+      
       // Handle quota exceeded or other API errors with fallback
-      if (error.status === 429 || error.message?.includes('quota')) {
+      if (isApiError(error) && (error.status === 429 || (error.message && error.message.includes('quota')))) {
         console.log('⚠️ Gemini API quota exceeded, using fallback schema')
         
         // Generate a fallback schema based on the description
         const fallbackSchema = generateFallbackSchema(description)
         schemaJson = fallbackSchema
       } else {
-        console.error('💥 Gemini API critical error:', error.message)
+        console.error('💥 Gemini API critical error:', apiError.message || String(error))
         return NextResponse.json({ 
           error: "AI service temporarily unavailable. Please try again later.",
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          details: process.env.NODE_ENV === 'development' ? (apiError.message || String(error)) : undefined
         }, { status: 503 })
       }
     }
@@ -229,9 +266,9 @@ Generate the schema now:
     console.log('✅ Schema structure validation passed')
 
     // Add metadata to indicate if fallback was used
-    const isUsingFallback = schemaJson.tables.length === 1 && 
+    const isUsingFallback = schemaJson.tables.length === 1 &&
                            schemaJson.tables[0].columns.length === 5 &&
-                           schemaJson.tables[0].columns.some((col: any) => col.name === 'id' && col.type === 'SERIAL')
+                           schemaJson.tables[0].columns.some((col: SchemaColumn) => col.name === 'id' && col.type === 'SERIAL')
 
     console.log('🎯 Schema generation completed successfully', {
       tablesCount: schemaJson.tables.length,
@@ -257,3 +294,8 @@ Generate the schema now:
     }, { status: 500 })
   }
 }
+
+/**
+ * Export POST dengan rate limiting
+ */
+export const POST = withRateLimit(handleSchemaGenerate, strictRateLimit);

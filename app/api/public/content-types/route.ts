@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withCors } from '@/lib/cors';
 
 // Public API untuk frontend consumer - menggunakan service role untuk bypass RLS
 const supabase = createClient(
@@ -11,7 +12,7 @@ const supabase = createClient(
  * GET /api/public/content-types
  * Mengambil semua content types yang tersedia untuk frontend consumer
  */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
@@ -75,3 +76,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Export dengan CORS support
+export const GET = withCors(getHandler);

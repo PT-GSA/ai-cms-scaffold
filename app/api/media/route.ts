@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { v4 as uuidv4 } from 'uuid'
+import { withRateLimit, apiRateLimit, uploadRateLimit } from '@/lib/rate-limit-middleware'
 
 /**
  * GET - Mengambil daftar media files dengan pagination dan filter
  */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
     
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST - Upload media file ke Supabase Storage
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
     
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     // Upload file ke Supabase Storage
     const bucketPath = `${fileTypeCategory}/${uniqueFilename}`
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('media-files')
       .upload(bucketPath, file, {
         cacheControl: '3600',
@@ -197,3 +198,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// Export rate-limited handlers
+export const GET = withRateLimit(getHandler, apiRateLimit);
+export const POST = withRateLimit(postHandler, uploadRateLimit);

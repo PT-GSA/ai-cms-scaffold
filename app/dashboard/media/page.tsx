@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import NextImage from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
   Dialog, 
@@ -29,12 +30,10 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { 
   Upload, 
   Search, 
-  Filter, 
   Grid, 
   List, 
   Trash2, 
   Edit, 
-  Download,
   Eye,
   FolderPlus,
   Folder,
@@ -43,17 +42,10 @@ import {
   Music,
   FileText,
   File,
-  Calendar,
-  Tag,
   SortAsc,
   SortDesc,
-  MoreVertical,
   Star,
-  Archive,
-  Share2,
-  Copy,
-  Move,
-  Settings
+  Archive
 } from 'lucide-react'
 
 interface MediaFile {
@@ -330,6 +322,7 @@ export default function MediaPage() {
    * Get icon berdasarkan file type
    */
   const getFileIcon = (mimeType: string, size = 'w-6 h-6') => {
+    // eslint-disable-next-line jsx-a11y/alt-text
     if (mimeType.startsWith('image/')) return <Image className={size} />
     if (mimeType.startsWith('video/')) return <Video className={size} />
     if (mimeType.startsWith('audio/')) return <Music className={size} />
@@ -523,9 +516,9 @@ export default function MediaPage() {
   }
 
   /**
-   * Handle upload success
+   * Handle upload success - refresh files list
    */
-  const handleUploadSuccess = useCallback((file: MediaFile) => {
+  const handleUploadSuccess = useCallback(() => {
     fetchFiles()
   }, [fetchFiles])
 
@@ -648,9 +641,11 @@ export default function MediaPage() {
                   <CardContent className="p-4">
                     <div className="aspect-square bg-gray-700 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                       {file.file_type === 'image' ? (
-                        <img
+                        <NextImage
                           src={file.file_path}
                           alt={file.alt_text || file.original_filename}
+                          width={200}
+                          height={200}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -708,9 +703,11 @@ export default function MediaPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         {file.file_type === 'image' ? (
-                          <img
+                          <NextImage
                             src={file.file_path}
                             alt={file.alt_text || file.original_filename}
+                            width={48}
+                            height={48}
                             className="w-12 h-12 object-cover rounded"
                           />
                         ) : (
@@ -816,9 +813,11 @@ export default function MediaPage() {
                 </DialogHeader>
                 <div className="space-y-4">
                   {selectedFile.file_type === 'image' ? (
-                    <img
+                    <NextImage
                       src={selectedFile.file_path}
                       alt={selectedFile.alt_text || selectedFile.original_filename}
+                      width={800}
+                      height={600}
                       className="w-full max-h-96 object-contain rounded"
                     />
                   ) : selectedFile.file_type === 'video' ? (

@@ -1,5 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import { withRateLimit, apiRateLimit } from '@/lib/rate-limit-middleware'
+import { withContentSanitization, getSanitizedBody } from '@/lib/input-sanitizer-middleware'
+
+// Type definitions
+interface ContentType {
+  id: number
+  name: string
+  display_name: string
+  icon: string | null
+}
+
+interface ContentTypeField {
+  id: string
+  field_name: string
+  display_name: string
+  field_type: string
+  is_required: boolean
+  is_unique: boolean
+  field_options: unknown | null
+}
+
+interface ContentEntryValue {
+  text_value: string | null
+  number_value: number | null
+  boolean_value: boolean | null
+  date_value: string | null
+  datetime_value: string | null
+  json_value: unknown | null
+  content_type_fields: {
+    field_name: string
+    field_type: string
+    display_name: string
+  }
+}
+
+interface ContentEntry {
+  id: string
+  content_type_id: number
+  slug: string
+  status: string
+  data: Record<string, unknown>
+  meta_data: Record<string, unknown> | null
+  published_at: string | null
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+  content_types: ContentType
+  content_type_fields?: ContentTypeField[]
+  content_entry_values?: ContentEntryValue[]
+}
 
 interface ContentEntryField {
   field_name: string
@@ -20,7 +71,7 @@ interface CreateContentEntryRequest {
  * GET /api/content-entries
  * Fetch content entries dengan filtering dan pagination
  */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const supabase = await createAdminSupabaseClient()
     const { searchParams } = new URL(request.url)
@@ -104,7 +155,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data untuk response
-    const transformedEntries = entries?.map((entry: any) => {
+    const transformedEntries = (entries as unknown as ContentEntry[])?.map((entry) => {
       const baseEntry = {
         id: entry.id,
         content_type_id: entry.content_type_id,
@@ -122,8 +173,8 @@ export async function GET(request: NextRequest) {
       }
 
       if (includeFields && entry.content_entry_values) {
-        const fieldValues: Record<string, any> = {}
-        entry.content_entry_values.forEach((value: any) => {
+        const fieldValues: Record<string, { value: unknown; field_type: string; display_name: string }> = {}
+        entry.content_entry_values.forEach((value: ContentEntryValue) => {
           const field = value.content_type_fields
           if (field) {
             fieldValues[field.field_name] = {
@@ -164,10 +215,13 @@ export async function GET(request: NextRequest) {
  * POST /api/content-entries
  * Create new content entry
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const supabase = createAdminSupabaseClient()
-    const body: CreateContentEntryRequest = await request.json()
+    
+    // Gunakan sanitized body jika tersedia
+    const sanitizedBody = getSanitizedBody(request);
+    const body: CreateContentEntryRequest = sanitizedBody || await request.json()
 
     const { 
       content_type_id, 
@@ -264,3 +318,7 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// Export rate-limited handlers
+export const GET = withRateLimit(getHandler, apiRateLimit);
+export const POST = withRateLimit(withContentSanitization(postHandler), apiRateLimit);

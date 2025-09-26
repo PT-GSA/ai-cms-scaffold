@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withRateLimit, strictRateLimit } from '@/lib/rate-limit-middleware';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,16 +12,16 @@ interface WebhookPayload {
   content_type: string;
   content_id: string;
   slug?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   timestamp: string;
 }
 
 /**
  * POST /api/webhooks
- * Trigger webhooks untuk notifikasi perubahan content
- * Digunakan untuk rebuild Vercel, sync dengan sistem lain, dll
+ * Endpoint untuk menerima dan memproses webhooks
+ * Rate limited untuk mencegah abuse
  */
-export async function POST(request: NextRequest) {
+async function handleWebhookPost(request: NextRequest) {
   try {
     const payload: WebhookPayload = await request.json();
     
@@ -204,3 +205,8 @@ export async function GET() {
     timestamp: new Date().toISOString()
   });
 }
+
+/**
+ * Export POST dengan rate limiting
+ */
+export const POST = withRateLimit(handleWebhookPost, strictRateLimit);

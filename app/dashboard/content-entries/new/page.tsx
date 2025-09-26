@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { ArrowLeft, Save, Eye, FileText, Calendar, User, BookOpen } from 'lucide-react'
+import { ArrowLeft, Save, FileText, Calendar, User, BookOpen } from 'lucide-react'
 
 interface ContentType {
   id: string
@@ -27,13 +27,13 @@ interface ContentTypeField {
   field_type: string
   display_name: string // Changed from field_label to display_name
   is_required: boolean
-  field_options: Record<string, any>
+  field_options: Record<string, unknown>
 }
 
 interface FormField {
   field_name: string
   field_type: string
-  value: string | number | boolean | Date | null
+  value: unknown
 }
 
 /**
@@ -46,9 +46,8 @@ function NewContentEntryPageContent() {
   
   const [contentTypes, setContentTypes] = useState<ContentType[]>([])
   const [selectedContentType, setSelectedContentType] = useState<ContentType | null>(null)
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [templateData, setTemplateData] = useState<any>(null)
+  const [templateData, setTemplateData] = useState<Record<string, unknown> | null>(null)
   
   // Form data
   const [title, setTitle] = useState('')
@@ -59,7 +58,7 @@ function NewContentEntryPageContent() {
   /**
    * Load template data dari URL parameter
    */
-  const loadTemplateData = () => {
+  const loadTemplateData = useCallback(() => {
     const templateParam = searchParams.get('template')
     if (templateParam) {
       try {
@@ -77,14 +76,13 @@ function NewContentEntryPageContent() {
       }
     }
     return null
-  }
+  }, [searchParams, toast])
 
   /**
    * Fetch content types dari API
    */
-  const fetchContentTypes = async () => {
+  const fetchContentTypes = useCallback(async () => {
     try {
-      setLoading(true)
       // Tambahkan parameter include_fields=true untuk mendapatkan fields
       const response = await fetch('/api/content-types?include_fields=true')
       const result = await response.json()
@@ -101,10 +99,8 @@ function NewContentEntryPageContent() {
         description: 'Gagal memuat content types',
         variant: 'destructive'
       })
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [toast])
 
   /**
    * Generate slug dari title
@@ -172,9 +168,9 @@ function NewContentEntryPageContent() {
   /**
    * Handle perubahan field value
    */
-  const handleFieldChange = (fieldName: string, value: any) => {
-    setFields(prev => prev.map(field => 
-      field.field_name === fieldName 
+  const handleFieldChange = (fieldName: string, value: unknown) => {
+    setFields(prev => prev.map(field =>
+      field.field_name === fieldName
         ? { ...field, value }
         : field
     ))
@@ -185,71 +181,63 @@ function NewContentEntryPageContent() {
    */
   const renderField = (field: ContentTypeField) => {
     const formField = fields.find(f => f.field_name === field.field_name)
-    const value = formField?.value || ''
+    const value = formField?.value
 
-    switch (field.field_type) {
-      case 'text':
-      case 'email':
-      case 'url':
-        return (
-          <Input
-            type={field.field_type}
-            value={value as string}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
+    if (field.field_type === 'text' || field.field_type === 'email' || field.field_type === 'url') {
+      return (
+        <Input
+          type={field.field_type}
+          value={String(value || '')}
+          onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+          placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
+        />
+      )
+    } else if (field.field_type === 'textarea') {
+      return (
+        <Textarea
+          value={String(value || '')}
+          onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+          placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
+          rows={4}
+        />
+      )
+    } else if (field.field_type === 'number') {
+      return (
+        <Input
+          type="number"
+          value={Number(value) || 0}
+          onChange={(e) => handleFieldChange(field.field_name, parseFloat(e.target.value) || 0)}
+          placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
+        />
+      )
+    } else if (field.field_type === 'boolean') {
+      return (
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.checked)}
+            className="rounded border-gray-300"
           />
-        )
-      
-      case 'textarea':
-        return (
-          <Textarea
-            value={value as string}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
-            rows={4}
-          />
-        )
-      
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value as number}
-            onChange={(e) => handleFieldChange(field.field_name, parseFloat(e.target.value) || 0)}
-            placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
-          />
-        )
-      
-      case 'boolean':
-        return (
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={value as boolean}
-              onChange={(e) => handleFieldChange(field.field_name, e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm text-gray-600">Ya</span>
-          </div>
-        )
-      
-      case 'date':
-        return (
-          <Input
-            type="date"
-            value={value ? new Date(value as string).toISOString().split('T')[0] : ''}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value ? new Date(e.target.value) : null)}
-          />
-        )
-      
-      default:
-        return (
-          <Input
-            value={value as string}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
-          />
-        )
+          <span className="text-sm text-gray-600">Ya</span>
+        </div>
+      )
+    } else if (field.field_type === 'date') {
+      return (
+        <Input
+          type="date"
+          value={value instanceof Date ? value.toISOString().split('T')[0] : value ? new Date(String(value)).toISOString().split('T')[0] : ''}
+          onChange={(e) => handleFieldChange(field.field_name, e.target.value ? new Date(e.target.value) : null)}
+        />
+      )
+    } else {
+      return (
+        <Input
+          value={String(value || '')}
+          onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+          placeholder={`Masukkan ${field.display_name.toLowerCase()}`}
+        />
+      )
     }
   }
 
@@ -322,7 +310,7 @@ function NewContentEntryPageContent() {
   // Load content types saat component mount
   useEffect(() => {
     fetchContentTypes()
-  }, [])
+  }, [fetchContentTypes])
 
   // Load template data dan apply ke form
   useEffect(() => {
@@ -333,21 +321,21 @@ function NewContentEntryPageContent() {
       if (contentType) {
         setSelectedContentType(contentType)
         
-        // Initialize fields
-        const fields = contentType.fields || contentType.content_type_fields || []
-        const initialFields: FormField[] = fields.map(field => ({
-          field_name: field.field_name,
-          field_type: field.field_type,
-          value: getDefaultValue(field.field_type)
-        }))
-        setFields(initialFields)
+      // Initialize fields
+      const contentTypeFields = contentType.fields || contentType.content_type_fields || []
+      const initialFields: FormField[] = contentTypeFields.map((field: ContentTypeField) => ({
+        field_name: field.field_name,
+        field_type: field.field_type,
+        value: getDefaultValue(field.field_type)
+      }))
+      setFields(initialFields)
         
         // Apply template data ke form
         if (template.preview_data) {
           // Set title dari template
           if (template.preview_data.title) {
-            setTitle(template.preview_data.title)
-            setSlug(generateSlug(template.preview_data.title))
+            setTitle(template.preview_data.title as string)
+            setSlug(generateSlug(template.preview_data.title as string))
           }
           
           // Apply field values dari template
@@ -362,12 +350,12 @@ function NewContentEntryPageContent() {
           
           toast({
             title: 'Template Loaded',
-            description: `Template "${template.template_name}" berhasil dimuat`,
+            description: `Template "${String(template.template_name)}" berhasil dimuat`,
           })
         }
       }
     }
-  }, [contentTypes, searchParams])
+  }, [contentTypes, loadTemplateData, toast])
 
   return (
     <div className="min-h-screen bg-gray-900 py-8">
@@ -390,13 +378,13 @@ function NewContentEntryPageContent() {
               {templateData && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <BookOpen className="h-3 w-3" />
-                  Template: {templateData.template_name}
+                  Template: {String(templateData.template_name)}
                 </Badge>
               )}
             </div>
             <p className="text-gray-600 mt-2">
-              {templateData 
-                ? `Menggunakan template "${templateData.template_name}" sebagai starting point`
+              {templateData
+                ? `Menggunakan template "${String(templateData.template_name)}" sebagai starting point`
                 : 'Buat content entry baru dengan mengisi form di bawah ini'
               }
             </p>

@@ -1,7 +1,16 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { addCorsHeaders, handleCorsPreflightRequest } from "@/lib/cors"
 
 export async function middleware(request: NextRequest) {
+  // Handle CORS preflight requests untuk API routes
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const preflightResponse = handleCorsPreflightRequest(request)
+    if (preflightResponse) {
+      return preflightResponse
+    }
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -50,6 +59,11 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/dashboard"
       return NextResponse.redirect(url)
     }
+  }
+
+  // Add CORS headers untuk API routes
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    response = addCorsHeaders(response, request)
   }
 
   return response

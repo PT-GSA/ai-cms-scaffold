@@ -23,12 +23,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { MediaUpload } from '@/components/media-upload'
-import { 
-  Search, 
-  Grid, 
-  List, 
-  Upload,
-  Image,
+import {
+  Search,
+  Grid,
+  List,
+  Image as ImageIcon,
   Video,
   Music,
   FileText,
@@ -104,7 +103,7 @@ export function MediaPicker({
    * Get icon berdasarkan file type
    */
   const getFileIcon = (mimeType: string, size = 'w-6 h-6') => {
-    if (mimeType.startsWith('image/')) return <Image className={size} />
+    if (mimeType.startsWith('image/')) return <ImageIcon className={size} />
     if (mimeType.startsWith('video/')) return <Video className={size} />
     if (mimeType.startsWith('audio/')) return <Music className={size} />
     if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text')) {
@@ -116,9 +115,9 @@ export function MediaPicker({
   /**
    * Check if file type is accepted
    */
-  const isFileTypeAccepted = (fileType: string): boolean => {
+  const isFileTypeAccepted = useCallback((fileType: string): boolean => {
     return accept.includes(fileType) || accept.includes('all')
-  }
+  }, [accept])
 
   /**
    * Fetch media files
@@ -162,7 +161,7 @@ export function MediaPicker({
     } finally {
       setLoading(false)
     }
-  }, [pagination.page, pagination.limit, searchTerm, fileTypeFilter, accept, toast])
+  }, [pagination.page, pagination.limit, searchTerm, fileTypeFilter, toast, isFileTypeAccepted])
 
   /**
    * Handle file selection
@@ -228,7 +227,7 @@ export function MediaPicker({
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline">
-            <Image className="w-4 h-4 mr-2" />
+            <ImageIcon className="w-4 h-4 mr-2" />
             Select Media
           </Button>
         )}
@@ -309,6 +308,7 @@ export function MediaPicker({
                       <CardContent className="p-3">
                         <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
                           {file.file_type === 'image' ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={file.file_path}
                               alt={file.alt_text || file.original_filename}
@@ -347,7 +347,7 @@ export function MediaPicker({
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            {file.file_type === 'image' ? (
+                            {file.file_type === 'image' ? (                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={file.file_path}
                                 alt={file.alt_text || file.original_filename}

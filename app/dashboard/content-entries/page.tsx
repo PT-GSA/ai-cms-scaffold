@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { 
@@ -17,7 +17,6 @@ import {
   Eye, 
   Calendar, 
   FileText,
-  Filter,
   SortAsc,
   SortDesc,
   Grid,
@@ -26,9 +25,7 @@ import {
   Archive,
   Clock,
   CheckCircle,
-  XCircle,
   BarChart3,
-  Settings,
   Menu,
   X
 } from 'lucide-react'
@@ -90,7 +87,7 @@ function ContentEntriesSidebar({
   isOpen: boolean
   onClose: () => void
   onCreateNew: () => void
-  router: any
+  router: ReturnType<typeof useRouter>
 }) {
   // Hitung statistik
   const stats = {
@@ -355,7 +352,7 @@ export default function ContentEntriesPage() {
   /**
    * Fetch content entries dari API
    */
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
@@ -392,7 +389,7 @@ export default function ContentEntriesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedContentType, selectedStatus, searchTerm, sortBy, sortOrder, toast])
 
   /**
    * Fetch content types untuk filter
@@ -492,12 +489,12 @@ export default function ContentEntriesPage() {
   useEffect(() => {
     fetchContentTypes()
     fetchEntries()
-  }, [])
+  }, [fetchEntries])
 
   // Refetch entries saat filter berubah
   useEffect(() => {
     fetchEntries()
-  }, [selectedContentType, selectedStatus, searchTerm, sortBy, sortOrder])
+  }, [fetchEntries, selectedContentType, selectedStatus, searchTerm, sortBy, sortOrder])
 
   return (
     <div className="min-h-screen bg-black flex">

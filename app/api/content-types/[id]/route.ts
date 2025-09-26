@@ -100,7 +100,7 @@ export async function PUT(
     }
 
     // Update content type
-    const { data: contentType, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('content_types')
       .update({
         display_name,
