@@ -9,6 +9,102 @@ const supabase = createClient(
 );
 
 /**
+ * POST /api/public/content-types
+ * Membuat content type baru
+ * Body:
+ * - name: nama content type (required, akan dijadikan slug)
+ * - display_name: nama tampilan (required)
+ * - description: deskripsi (optional)
+ * - fields: array field definitions (required)
+ * - is_active: status aktif (default: true)
+ */
+async function postHandler(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { name, display_name, description, fields, is_active = true } = body;
+
+    if (!name) {
+      return NextResponse.json(
+        { error: 'name is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!display_name) {
+      return NextResponse.json(
+        { error: 'display_name is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      return NextResponse.json(
+        { error: 'fields array is required and must not be empty' },
+        { status: 400 }
+      );
+    }
+
+    // Validasi format name (slug-friendly)
+    const slugName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    
+    // Cek apakah content type dengan name yang sama sudah ada
+    const { data: existingType, error: checkError } = await supabase
+      .from('content_types')
+      .select('id')
+      .eq('name', slugName)
+      .single();
+
+    if (existingType) {
+      return NextResponse.json(
+        { error: 'Content type with this name already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Insert content type baru
+    const { data: newContentType, error: insertError } = await supabase
+      .from('content_types')
+      .insert({
+        name: slugName,
+        display_name,
+        description: description || '',
+        fields,
+        is_active
+      })
+      .select(`
+        id,
+        name,
+        display_name,
+        description,
+        fields,
+        is_active,
+        created_at,
+        updated_at
+      `)
+      .single();
+
+    if (insertError) {
+      console.error('Error creating content type:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create content type' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      data: newContentType,
+      message: 'Content type created successfully'
+    }, { status: 201 });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * GET /api/public/content-types
  * Mengambil semua content types yang tersedia untuk frontend consumer
  */
@@ -79,3 +175,4 @@ async function getHandler(request: NextRequest) {
 
 // Export dengan CORS support
 export const GET = withCors(getHandler);
+export const POST = withCors(postHandler);

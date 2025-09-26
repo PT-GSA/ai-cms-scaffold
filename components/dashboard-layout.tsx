@@ -21,7 +21,8 @@ import {
   User,
   Search,
   Bell,
-  Image
+  Image,
+  Play
 } from "lucide-react"
 
 interface DashboardLayoutProps {
@@ -103,6 +104,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               label="Documentation"
               href="/dashboard/docs"
               isActive={pathname === "/dashboard/docs"}
+            />
+            <SidebarItem
+              icon={<Play className="h-5 w-5" />}
+              label="API Playground"
+              href="/dashboard/playground"
+              isActive={pathname === "/dashboard/playground"}
             />
             <SidebarItem
               icon={<BarChart3 className="h-5 w-5" />}

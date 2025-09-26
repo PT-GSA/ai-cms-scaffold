@@ -116,3 +116,100 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+/**
+ * POST /api/public/content-entries
+ * Membuat content entry baru
+ * Body:
+ * - content_type: slug dari content type (required)
+ * - slug: slug untuk entry (optional, akan di-generate jika tidak ada)
+ * - data: data content (required)
+ * - meta_data: metadata tambahan (optional)
+ * - status: status entry (default: draft)
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { content_type, slug, data, meta_data, status = 'draft' } = body;
+
+    if (!content_type) {
+      return NextResponse.json(
+        { error: 'content_type is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: 'data is required' },
+        { status: 400 }
+      );
+    }
+
+    // Ambil content type berdasarkan name
+    const { data: contentTypeData, error: contentTypeError } = await supabase
+      .from('content_types')
+      .select('id, name, display_name')
+      .eq('name', content_type)
+      .eq('is_active', true)
+      .single();
+
+    if (contentTypeError || !contentTypeData) {
+      return NextResponse.json(
+        { error: 'Content type not found' },
+        { status: 404 }
+      );
+    }
+
+    // Generate slug jika tidak ada
+    let entrySlug = slug;
+    if (!entrySlug && data.title) {
+      entrySlug = data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
+    // Insert content entry
+    const { data: newEntry, error: insertError } = await supabase
+      .from('content_entries')
+      .insert({
+        content_type_id: contentTypeData.id,
+        slug: entrySlug,
+        data,
+        meta_data: meta_data || {},
+        status,
+        published_at: status === 'published' ? new Date().toISOString() : null
+      })
+      .select(`
+        id,
+        slug,
+        status,
+        data,
+        meta_data,
+        published_at,
+        created_at,
+        updated_at
+      `)
+      .single();
+
+    if (insertError) {
+      console.error('Error creating content entry:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create content entry' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      data: newEntry,
+      message: 'Content entry created successfully'
+    }, { status: 201 });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
