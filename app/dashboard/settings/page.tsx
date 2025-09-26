@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { 
   User, 
@@ -24,7 +25,10 @@ import {
   Eye,
   EyeOff,
   Check,
-  X
+  X,
+  Trash2,
+  Copy,
+  CheckCircle
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -90,6 +94,218 @@ export default function SettingsPage() {
     }
   })
 
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState<any[]>([])
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false)
+  const [newKeyName, setNewKeyName] = useState('')
+  const [newKeyType, setNewKeyType] = useState('production')
+  const [generatedKey, setGeneratedKey] = useState<any>(null)
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set())
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  /**
+   * Load user settings from database
+   */
+  const loadUserSettings = async () => {
+    try {
+      const response = await fetch('/api/user-settings?type=all')
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        const settings = result.data
+        
+        // Update settings data with loaded values
+        if (settings.appearance) {
+          setSettingsData(prev => ({
+            ...prev,
+            theme: settings.appearance.theme || 'dark',
+            language: settings.appearance.language || 'id'
+          }))
+        }
+        
+        if (settings.notifications) {
+          setSettingsData(prev => ({
+            ...prev,
+            notifications: {
+              ...prev.notifications,
+              ...settings.notifications
+            }
+          }))
+        }
+        
+        if (settings.security) {
+          setSettingsData(prev => ({
+            ...prev,
+            security: {
+              ...prev.security,
+              ...settings.security
+            }
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user settings:', error)
+    }
+  }
+
+  /**
+   * Load API keys from database
+   */
+  const loadApiKeys = async () => {
+    try {
+      console.log('Loading API keys...')
+        const response = await fetch('/api/api-keys')
+        
+        console.log('API keys response:', response)
+        
+        if (response.ok) {
+          const result = await response.json()
+          console.log('API keys loaded:', result.data)
+          setApiKeys(result.data || [])
+        } else {
+          const errorResult = await response.json()
+          console.error('Failed to load API keys:', errorResult.error)
+        }
+      } catch (error) {
+        console.error('Error loading API keys:', error)
+    }
+  }
+
+  /**
+   * Generate new API key
+   */
+  const handleGenerateApiKey = async () => {
+    if (!newKeyName.trim()) {
+      toast({
+        title: "Error",
+        description: "Nama API key harus diisi.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          key_name: newKeyName,
+          key_type: newKeyType
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setGeneratedKey(result.data)
+        setNewKeyName('')
+        setNewKeyType('production')
+        setShowGenerateDialog(false) // Tutup dialog
+        loadApiKeys() // Reload API keys list
+        toast({
+          title: "API Key Generated",
+          description: "API key berhasil dibuat.",
+        })
+      } else {
+        throw new Error(result.error || 'Failed to generate API key')
+      }
+    } catch (error) {
+      console.error('Error generating API key:', error)
+      toast({
+        title: "Error",
+        description: "Gagal membuat API key.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  /**
+   * Delete API key
+   */
+  const handleDeleteApiKey = async (id: string) => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/api-keys/${id}`, {
+        method: 'DELETE'
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        loadApiKeys() // Reload API keys list
+        toast({
+          title: "API Key Deleted",
+          description: "API key berhasil dihapus.",
+        })
+      } else {
+        throw new Error(result.error || 'Failed to delete API key')
+      }
+    } catch (error) {
+      console.error('Error deleting API key:', error)
+      toast({
+        title: "Error",
+        description: "Gagal menghapus API key.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  /**
+   * Toggle hide/unhide API key
+   */
+  const toggleKeyVisibility = (keyId: string) => {
+    setHiddenKeys(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(keyId)) {
+        newSet.delete(keyId)
+      } else {
+        newSet.add(keyId)
+      }
+      return newSet
+    })
+  }
+
+  /**
+   * Copy API key to clipboard
+   */
+  const copyApiKey = async (keyValue: string, keyId: string) => {
+    try {
+      await navigator.clipboard.writeText(keyValue)
+      setCopiedKey(keyId)
+      toast({
+        title: "Copied",
+        description: "API key berhasil disalin ke clipboard.",
+      })
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedKey(null)
+      }, 2000)
+    } catch (error) {
+      console.error('Error copying API key:', error)
+      toast({
+        title: "Error",
+        description: "Gagal menyalin API key.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  /**
+   * Get masked API key
+   */
+  const getMaskedKey = (keyValue: string) => {
+    if (keyValue.length <= 8) return keyValue
+    return keyValue.substring(0, 8) + '****-****-****-****'
+  }
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login")
@@ -101,6 +317,10 @@ export default function SettingsPage() {
         email: user.email || '',
         full_name: user.user_metadata?.full_name || ''
       }))
+      
+      // Load user settings and API keys
+      loadUserSettings()
+      loadApiKeys()
     }
   }, [user, loading, router])
 
@@ -110,14 +330,29 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast({
-        title: "Profile Updated",
-        description: "Profil Anda berhasil diperbarui.",
+      const response = await fetch('/api/user-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          full_name: profileData.full_name,
+          email: profileData.email
+        })
       })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Profile Updated",
+          description: "Profil Anda berhasil diperbarui.",
+        })
+      } else {
+        throw new Error(result.error || 'Failed to update profile')
+      }
     } catch (error) {
+      console.error('Error updating profile:', error)
       toast({
         title: "Error",
         description: "Gagal memperbarui profil.",
@@ -143,21 +378,36 @@ export default function SettingsPage() {
 
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      setProfileData(prev => ({
-        ...prev,
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      }))
-      
-      toast({
-        title: "Password Changed",
-        description: "Password berhasil diubah.",
+      const response = await fetch('/api/user-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          current_password: profileData.current_password,
+          new_password: profileData.new_password
+        })
       })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setProfileData(prev => ({
+          ...prev,
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
+        }))
+        
+        toast({
+          title: "Password Changed",
+          description: "Password berhasil diubah.",
+        })
+      } else {
+        throw new Error(result.error || 'Failed to change password')
+      }
     } catch (error) {
+      console.error('Error changing password:', error)
       toast({
         title: "Error",
         description: "Gagal mengubah password.",
@@ -171,17 +421,32 @@ export default function SettingsPage() {
   /**
    * Handle save settings
    */
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (settingsType: string, settingsData: any) => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast({
-        title: "Settings Saved",
-        description: "Pengaturan berhasil disimpan.",
+      const response = await fetch('/api/user-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          settings_type: settingsType,
+          settings_data: settingsData
+        })
       })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Settings Saved",
+          description: "Pengaturan berhasil disimpan.",
+        })
+      } else {
+        throw new Error(result.error || 'Failed to save settings')
+      }
     } catch (error) {
+      console.error('Error saving settings:', error)
       toast({
         title: "Error",
         description: "Gagal menyimpan pengaturan.",
@@ -412,7 +677,7 @@ export default function SettingsPage() {
                 </div>
 
                 <Button 
-                  onClick={handleSaveSettings}
+                  onClick={() => handleSaveSettings('security', settingsData.security)}
                   disabled={isLoading}
                   className="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
                 >
@@ -461,7 +726,7 @@ export default function SettingsPage() {
                 </div>
 
                 <Button 
-                  onClick={handleSaveSettings}
+                  onClick={() => handleSaveSettings('appearance', { theme: settingsData.theme, language: settingsData.language })}
                   disabled={isLoading}
                   className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
                 >
@@ -523,7 +788,7 @@ export default function SettingsPage() {
                 </div>
 
                 <Button 
-                  onClick={handleSaveSettings}
+                  onClick={() => handleSaveSettings('notifications', settingsData.notifications)}
                   disabled={isLoading}
                   className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
                 >
@@ -577,46 +842,202 @@ export default function SettingsPage() {
                   <p className="text-gray-400">Manage your API keys for external integrations</p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="p-4 bg-black rounded-lg border border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Key className="h-5 w-5 text-yellow-400" />
-                        <div>
-                          <p className="text-white font-medium">Production API Key</p>
-                          <p className="text-sm text-gray-400">sk-prod-****-****-****-****</p>
+                {/* Generated Key Display */}
+                {generatedKey && (
+                  <div className="p-4 bg-green-900/20 border border-green-600 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-green-400 font-medium">New API Key Generated!</h4>
+                      <button
+                        onClick={() => setGeneratedKey(null)}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-sm text-gray-300">Name: {generatedKey.key_name}</p>
+                        <p className="text-sm text-gray-300">Type: {generatedKey.key_type}</p>
+                      </div>
+                      <div className="p-3 bg-black rounded border">
+                        <div className="flex items-center justify-between">
+                          <p className="text-green-400 font-mono text-sm break-all flex-1">
+                            {generatedKey.key_value}
+                          </p>
+                          <button
+                            onClick={() => copyApiKey(generatedKey.key_value, 'generated')}
+                            className="ml-2 text-gray-400 hover:text-white transition-colors"
+                            title="Copy key"
+                          >
+                            {copiedKey === 'generated' ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                          </button>
                         </div>
                       </div>
-                      <Badge variant="default">Active</Badge>
+                      <p className="text-sm text-muted-foreground">
+                    Simpan API key ini dengan aman. Anda tidak akan bisa melihatnya lagi setelah menutup dialog ini.
+                  </p>
                     </div>
                   </div>
+                )}
 
-                  <div className="p-4 bg-black rounded-lg border border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Key className="h-5 w-5 text-blue-400" />
-                        <div>
-                          <p className="text-white font-medium">Development API Key</p>
-                          <p className="text-sm text-gray-400">sk-dev-****-****-****-****</p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary">Inactive</Badge>
+                {/* API Keys List */}
+                <div className="space-y-4">
+                  {apiKeys.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Key className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-semibold text-white">Tidak ada API keys</h3>
+                      <p className="mt-1 text-sm text-gray-400">
+                        Mulai dengan membuat API key pertama Anda
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Debug: apiKeys.length = {apiKeys.length}
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    apiKeys.map((key) => {
+                      const isHidden = hiddenKeys.has(key.id)
+                      const isCopied = copiedKey === key.id
+                      
+                      return (
+                        <div key={key.id} className="p-4 bg-black rounded-lg border border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                              <Key className={`h-5 w-5 ${
+                                key.key_type === 'production' ? 'text-yellow-400' : 
+                                key.key_type === 'development' ? 'text-blue-400' : 'text-green-400'
+                              }`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white font-medium">{key.key_name}</p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <p className="text-sm text-gray-400 font-mono">
+                                    {isHidden ? getMaskedKey(key.key_value) : key.key_value}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-white mt-1">
+                                  Created: {new Date(key.created_at).toLocaleDateString('id-ID')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={key.is_active ? "default" : "secondary"}>
+                                {key.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => toggleKeyVisibility(key.id)}
+                                title={isHidden ? "Show key" : "Hide key"}
+                              >
+                                {isHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => copyApiKey(key.key_value, key.id)}
+                                title="Copy key"
+                              >
+                                {isCopied ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                onClick={() => handleDeleteApiKey(key.id)}
+                                disabled={isLoading}
+                                title="Delete key"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
 
-                <Button 
-                  onClick={handleSaveSettings}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
-                >
-                  <Key className="mr-2 h-4 w-4" />
-                  Generate New Key
-                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={() => setShowGenerateDialog(true)}
+                    disabled={isLoading}
+                    className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
+                  >
+                    <Key className="mr-2 h-4 w-4" />
+                    Generate New Key
+                  </Button>
+                  <Button 
+                    onClick={loadApiKeys}
+                    disabled={isLoading}
+                    variant="outline"
+                    className="border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
+                  >
+                    Reload
+                  </Button>
+                </div>
               </div>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Generate API Key Dialog */}
+        <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Generate New API Key</DialogTitle>
+              <DialogDescription>
+                Buat API key baru untuk integrasi eksternal
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="key_name" className="text-gray-300">Key Name</Label>
+                <Input
+                  id="key_name"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  className="bg-black border-purple-600 text-white"
+                  placeholder="Enter key name (e.g., My App Integration)"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="key_type" className="text-gray-300">Key Type</Label>
+                <select
+                  id="key_type"
+                  value={newKeyType}
+                  onChange={(e) => setNewKeyType(e.target.value)}
+                  className="w-full p-2 bg-black border border-purple-600 text-white rounded-md"
+                >
+                  <option value="production">Production</option>
+                  <option value="development">Development</option>
+                  <option value="test">Test</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowGenerateDialog(false)
+                  setNewKeyName('')
+                  setNewKeyType('production')
+                }}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGenerateApiKey}
+                disabled={isLoading || !newKeyName.trim()}
+                className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
+              >
+                {isLoading ? 'Generating...' : 'Generate Key'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )

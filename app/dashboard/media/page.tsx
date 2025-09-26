@@ -261,12 +261,12 @@ function MediaSidebar({
                 </div>
                 {storageData.is_quota_exceeded && (
                   <div className="text-xs text-red-400 mt-1">
-                    ⚠️ Storage quota exceeded
+                    Storage quota exceeded
                   </div>
                 )}
-                <div className="text-xs text-gray-500 mt-1">
-                  {storageData.file_count} files • {storageData.remaining_formatted} remaining
-                </div>
+                <div className="text-xs text-muted-foreground">
+                    {storageData.file_count} files - {storageData.remaining_formatted} remaining
+                  </div>
               </>
             ) : (
               <div className="text-xs text-red-400">

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         filename,
-        original_name,
+        original_filename,
         file_path,
         file_size,
         mime_type,
