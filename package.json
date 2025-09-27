@@ -96,7 +96,8 @@
     "uuid": "^13.0.0",
     "validator": "^13.15.15",
     "vaul": "^0.9.6",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "@supabase/auth-helpers-nextjs": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
