@@ -335,53 +335,35 @@ export function ApiPlayground() {
             is_active: true
           }, null, 2))
         } else if (selectedEndpoint.method === 'PUT') {
-          setCustomPath('/api/public/content-types/product')
+          setCustomPath('/api/public/content-types/blog_post')
           setRequestBody(JSON.stringify({
-            display_name: 'Updated Product',
-            description: 'Updated product catalog with new fields',
+            display_name: 'Updated Blog Post',
+            description: 'Updated blog post content type',
             fields: [
               {
                 name: 'title',
                 type: 'text',
-                required: true,
-                validation: { min_length: 3, max_length: 100 }
+                required: true
               },
               {
-                name: 'description',
+                name: 'content',
                 type: 'textarea',
                 required: true
               },
               {
-                name: 'price',
-                type: 'number',
-                required: true,
-                validation: { min: 0 }
-              },
-              {
-                name: 'category',
-                type: 'select',
-                required: true,
-                options: ['electronics', 'clothing', 'books', 'home', 'sports']
-              },
-              {
-                name: 'featured_image',
-                type: 'image',
-                required: false
-              },
-              {
-                name: 'tags',
-                type: 'array',
+                name: 'author',
+                type: 'text',
                 required: false
               }
             ],
             is_active: true
           }, null, 2))
         } else if (selectedEndpoint.method === 'GET' && selectedEndpoint.path.includes('[slug]')) {
-          setCustomPath('/api/public/content-types/product')
+          setCustomPath('/api/public/content-types/blog_post')
         } else if (selectedEndpoint.method === 'DELETE') {
-          setCustomPath('/api/public/content-types/product')
+          setCustomPath('/api/public/content-types/blog_post')
         } else if (selectedEndpoint.method === 'GET') {
-          setQueryParams('slug=product')
+          setQueryParams('slug=blog_post')
         }
       } else if (selectedEndpoint.path.includes('content-entries')) {
         if (selectedEndpoint.method === 'POST') {
@@ -539,6 +521,8 @@ export function ApiPlayground() {
                     API key diperlukan untuk mengakses public endpoints. 
                     <br />
                     Dapatkan API key di halaman Settings → API Keys.
+                    <br />
+                    <strong>Catatan:</strong> Semua endpoint PUT, POST, dan DELETE memerlukan API key yang valid.
                   </p>
                 </div>
 
@@ -590,6 +574,28 @@ export function ApiPlayground() {
                     />
                   </div>
                 )}
+
+                {/* Preset Buttons */}
+                <div className="flex gap-2">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => loadPreset('example')}
+                    disabled={!selectedEndpoint}
+                  >
+                    Load Example
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => loadPreset('minimal')}
+                    disabled={!selectedEndpoint}
+                  >
+                    Load Minimal
+                  </Button>
+                </div>
 
                 {/* Send Button */}
                 <Button 

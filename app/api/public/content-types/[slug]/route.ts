@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { withCors } from '@/lib/cors';
+import { withApiKeyValidation } from '@/lib/api-key-middleware';
 
 // Public API untuk frontend consumer - menggunakan service role key untuk bypass RLS
 const supabase = createClient(
@@ -34,7 +35,6 @@ async function getHandler(
         name,
         display_name,
         description,
-        fields,
         is_active,
         created_at,
         updated_at
@@ -50,8 +50,32 @@ async function getHandler(
       );
     }
 
+    // Ambil fields dari tabel content_type_fields
+    const { data: fieldsData, error: fieldsError } = await supabase
+      .from('content_type_fields')
+      .select('field_name, display_name, field_type, is_required, validation_rules, field_options, sort_order')
+      .eq('content_type_id', contentType.id)
+      .order('sort_order');
+
+    if (fieldsError) {
+      console.error('Error fetching fields:', fieldsError);
+    }
+
+    // Transform fields data untuk response
+    const transformedFields = fieldsData?.map(field => ({
+      name: field.field_name,
+      display_name: field.display_name,
+      type: field.field_type,
+      required: field.is_required,
+      validation: field.validation_rules,
+      options: field.field_options
+    })) || [];
+
     return NextResponse.json({
-      data: contentType
+      data: {
+        ...contentType,
+        fields: transformedFields
+      }
     });
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -121,7 +145,45 @@ async function putHandler(
           { status: 400 }
         );
       }
-      updateData.fields = fields;
+      
+      // Update fields di tabel content_type_fields
+      // Hapus fields lama terlebih dahulu
+      const { error: deleteFieldsError } = await supabase
+        .from('content_type_fields')
+        .delete()
+        .eq('content_type_id', existingType.id);
+      
+      if (deleteFieldsError) {
+        console.error('Error deleting old fields:', deleteFieldsError);
+        return NextResponse.json(
+          { error: 'Failed to update fields' },
+          { status: 500 }
+        );
+      }
+      
+      // Insert fields baru
+      const fieldsToInsert = fields.map((field, index) => ({
+        content_type_id: existingType.id,
+        field_name: field.name,
+        display_name: field.display_name || field.name,
+        field_type: field.type,
+        is_required: field.required || false,
+        validation_rules: field.validation || null,
+        field_options: field.options || null,
+        sort_order: index + 1
+      }));
+      
+      const { error: insertFieldsError } = await supabase
+        .from('content_type_fields')
+        .insert(fieldsToInsert);
+      
+      if (insertFieldsError) {
+        console.error('Error inserting new fields:', insertFieldsError);
+        return NextResponse.json(
+          { error: 'Failed to update fields' },
+          { status: 500 }
+        );
+      }
     }
 
     if (is_active !== undefined) {
@@ -138,7 +200,6 @@ async function putHandler(
         name,
         display_name,
         description,
-        fields,
         is_active,
         created_at,
         updated_at
@@ -153,8 +214,32 @@ async function putHandler(
       );
     }
 
+    // Ambil fields dari tabel content_type_fields
+    const { data: fieldsData, error: fieldsError } = await supabase
+      .from('content_type_fields')
+      .select('field_name, display_name, field_type, is_required, validation_rules, field_options, sort_order')
+      .eq('content_type_id', updatedContentType.id)
+      .order('sort_order');
+
+    if (fieldsError) {
+      console.error('Error fetching fields:', fieldsError);
+    }
+
+    // Transform fields data untuk response
+    const transformedFields = fieldsData?.map(field => ({
+      name: field.field_name,
+      display_name: field.display_name,
+      type: field.field_type,
+      required: field.is_required,
+      validation: field.validation_rules,
+      options: field.field_options
+    })) || [];
+
     return NextResponse.json({
-      data: updatedContentType,
+      data: {
+        ...updatedContentType,
+        fields: transformedFields
+      },
       message: 'Content type updated successfully'
     });
   } catch (error) {
@@ -245,7 +330,7 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   return withCors(async (req: NextRequest) => {
-    return putHandler(req, { params });
+    return withApiKeyValidation(putHandler)(req, { params });
   })(request);
 }
 
@@ -254,6 +339,6 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   return withCors(async (req: NextRequest) => {
-    return deleteHandler(req, { params });
+    return withApiKeyValidation(deleteHandler)(req, { params });
   })(request);
 }

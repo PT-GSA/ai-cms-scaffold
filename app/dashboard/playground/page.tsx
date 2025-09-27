@@ -35,16 +35,6 @@ export default function PlaygroundPage() {
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-6 p-6 md:p-8">
-        {/* Header Section */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-white">
-            API Playground
-          </h1>
-          <p className="text-gray-400">
-            Uji coba API endpoints secara interaktif dengan form yang mudah digunakan
-          </p>
-        </div>
-        
         {/* Main Content */}
         <div className="w-full">
           <ApiPlayground />

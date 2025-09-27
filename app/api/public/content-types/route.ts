@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { withCors } from '@/lib/cors';
+import { withApiKeyValidation } from '@/lib/api-key-middleware';
 
 // Public API untuk frontend consumer - menggunakan service role untuk bypass RLS
 const supabase = createClient(
@@ -68,7 +69,6 @@ async function postHandler(request: NextRequest) {
         name: slugName,
         display_name,
         description: description || '',
-        fields,
         is_active
       })
       .select(`
@@ -76,7 +76,6 @@ async function postHandler(request: NextRequest) {
         name,
         display_name,
         description,
-        fields,
         is_active,
         created_at,
         updated_at
@@ -91,8 +90,37 @@ async function postHandler(request: NextRequest) {
       );
     }
 
+    // Insert fields ke tabel content_type_fields
+    const fieldsToInsert = fields.map((field, index) => ({
+      content_type_id: newContentType.id,
+      field_name: field.name,
+      display_name: field.display_name || field.name,
+      field_type: field.type,
+      is_required: field.required || false,
+      validation_rules: field.validation || null,
+      field_options: field.options || null,
+      sort_order: index + 1
+    }));
+
+    const { error: insertFieldsError } = await supabase
+      .from('content_type_fields')
+      .insert(fieldsToInsert);
+
+    if (insertFieldsError) {
+      console.error('Error creating fields:', insertFieldsError);
+      // Rollback content type jika fields gagal dibuat
+      await supabase.from('content_types').delete().eq('id', newContentType.id);
+      return NextResponse.json(
+        { error: 'Failed to create content type fields' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
-      data: newContentType,
+      data: {
+        ...newContentType,
+        fields
+      },
       message: 'Content type created successfully'
     }, { status: 201 });
   } catch (error) {
@@ -175,4 +203,4 @@ async function getHandler(request: NextRequest) {
 
 // Export dengan CORS support
 export const GET = withCors(getHandler);
-export const POST = withCors(postHandler);
+export const POST = withCors(withApiKeyValidation(postHandler));
