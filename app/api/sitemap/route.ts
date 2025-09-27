@@ -1,13 +1,10 @@
 /**
  * Auto-Generate XML Sitemap untuk AI CMS Scaffold
- * Update otomatis saat content berubah dengan cache invalidation
+ * Static generation compatible - no dynamic server usage
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { withRateLimit, createRateLimitMiddleware } from '@/lib/rate-limit-middleware'
-import { getClientIP } from '@/lib/redis'
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 interface SitemapEntry {
   url: string
@@ -20,23 +17,26 @@ interface SitemapEntry {
  * Generate XML Sitemap
  */
 async function generateSitemap(): Promise<string> {
-  const supabase = createRouteHandlerClient({ cookies })
+  // Use public Supabase client for static generation
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com'
   
-  // Get all published content entries
+  // Get all published content entries using public API
   const { data: contentEntries, error: contentError } = await supabase
     .from('content_entries')
     .select(`
       id,
-      title,
       slug,
-      content_type,
       status,
       updated_at,
       published_at,
+      data,
       content_types!inner (
         name,
-        slug
+        display_name
       )
     `)
     .eq('status', 'published')
@@ -50,7 +50,8 @@ async function generateSitemap(): Promise<string> {
   // Get all content types for category pages
   const { data: contentTypes, error: typesError } = await supabase
     .from('content_types')
-    .select('name, slug, updated_at')
+    .select('name, display_name, updated_at')
+    .eq('is_active', true)
 
   if (typesError) {
     console.error('Error fetching content types:', typesError)
@@ -85,7 +86,7 @@ async function generateSitemap(): Promise<string> {
   // Content type listing pages
   contentTypes?.forEach(contentType => {
     entries.push({
-      url: `${baseUrl}/${contentType.slug}`,
+      url: `${baseUrl}/${contentType.name}`,
       lastModified: contentType.updated_at || new Date().toISOString(),
       changeFrequency: 'weekly',
       priority: 0.8
@@ -99,7 +100,7 @@ async function generateSitemap(): Promise<string> {
     const changeFreq = getChangeFrequencyByContentType(contentType?.name || 'default')
     
     entries.push({
-      url: `${baseUrl}/${contentType?.slug || 'content'}/${entry.slug}`,
+      url: `${baseUrl}/${contentType?.name || 'content'}/${entry.slug}`,
       lastModified: entry.updated_at || entry.published_at || new Date().toISOString(),
       changeFrequency: changeFreq,
       priority: priority
@@ -163,9 +164,9 @@ ${entries.map(entry => `  <url>
 }
 
 /**
- * Handle GET request for sitemap
+ * Handle GET request for sitemap - Static generation compatible
  */
-async function handleSitemapRequest(): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
     const sitemap = await generateSitemap()
     
@@ -185,19 +186,6 @@ async function handleSitemapRequest(): Promise<NextResponse> {
     )
   }
 }
-
-// Rate limited sitemap endpoint
-// Custom rate limiter for sitemap - 60 requests per 15 minutes
-const sitemapRateLimit = createRateLimitMiddleware({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 60, // 60 requests per window
-  keyGenerator: (request: NextRequest) => {
-    return getClientIP(request) || 'anonymous'
-  },
-  message: 'Too many sitemap requests, please try again later.'
-})
-
-export const GET = withRateLimit(handleSitemapRequest, sitemapRateLimit)
 
 /**
  * Generate sitemap index for large sites
