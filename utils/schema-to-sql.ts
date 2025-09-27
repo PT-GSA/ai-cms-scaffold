@@ -4,7 +4,7 @@ interface Column {
   nullable?: boolean
   primary_key?: boolean
   unique?: boolean
-  default?: any
+  default?: string | number | boolean | null
 }
 
 interface Table {
@@ -70,26 +70,28 @@ function sanitizeIdentifier(identifier: string): string {
   return sanitized
 }
 
-export function validateSchema(schema: any): boolean {
-  if (!schema || typeof schema !== "object") {
+export function validateSchema(schema: unknown): schema is Schema {
+  if (!schema || typeof schema !== "object" || schema === null) {
     return false
   }
 
-  if (!Array.isArray(schema.tables)) {
+  const schemaObj = schema as Record<string, unknown>
+  if (!Array.isArray(schemaObj.tables)) {
     return false
   }
 
-  for (const table of schema.tables) {
-    if (!table.name || typeof table.name !== "string") {
+  for (const table of schemaObj.tables) {
+    if (!table || typeof table !== "object" || !table.name || typeof table.name !== "string") {
       return false
     }
 
-    if (!Array.isArray(table.columns)) {
+    const tableObj = table as Record<string, unknown>
+    if (!Array.isArray(tableObj.columns)) {
       return false
     }
 
-    for (const column of table.columns) {
-      if (!column.name || !column.type) {
+    for (const column of tableObj.columns) {
+      if (!column || typeof column !== "object" || !column.name || !column.type) {
         return false
       }
     }

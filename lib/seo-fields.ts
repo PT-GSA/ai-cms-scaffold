@@ -220,7 +220,28 @@ export interface AISeOSuggestions {
 /**
  * SEO Score Calculation
  */
-export function calculateSEOScore(content: any): {
+interface ContentForSEO {
+  meta_title?: string
+  title?: string
+  meta_description?: string
+  excerpt?: string
+  canonical_url?: string
+  published_at?: string
+  updated_at?: string
+  author?: {
+    display_name?: string
+  }
+  category?: string
+  additional_keywords?: string
+  content?: string
+  og_image?: string
+  brand?: string
+  sku?: string
+  price?: number
+  currency?: string
+}
+
+export function calculateSEOScore(content: ContentForSEO): {
   score: number
   breakdown: Record<string, number>
   recommendations: string[]
@@ -282,7 +303,7 @@ export function calculateSEOScore(content: any): {
 /**
  * Generate Schema.org JSON-LD
  */
-export function generateSchemaMarkup(content: any, type: string) {
+export function generateSchemaMarkup(content: ContentForSEO, type: string) {
   const baseSchema = {
     "@context": "https://schema.org",
     "@type": type,

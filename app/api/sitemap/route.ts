@@ -13,6 +13,22 @@ interface SitemapEntry {
   priority: number
 }
 
+interface ContentEntry {
+  id: string
+  slug: string
+  status: string
+  updated_at: string | null
+  published_at: string | null
+  data: Record<string, unknown>
+  content_types: {
+    name: string
+    display_name: string
+  } | {
+    name: string
+    display_name: string
+  }[]
+}
+
 /**
  * Generate XML Sitemap
  */
@@ -94,8 +110,11 @@ async function generateSitemap(): Promise<string> {
   })
 
   // Individual content entries
-  contentEntries?.forEach((entry: any) => {
-    const contentType = entry.content_types
+  contentEntries?.forEach((entry: ContentEntry) => {
+    // Handle both single object and array response from Supabase
+    const contentType = Array.isArray(entry.content_types) 
+      ? entry.content_types[0] 
+      : entry.content_types
     const priority = getPriorityByContentType(contentType?.name || 'default')
     const changeFreq = getChangeFrequencyByContentType(contentType?.name || 'default')
     
