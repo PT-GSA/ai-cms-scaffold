@@ -49,7 +49,7 @@ async function postHandler(request: NextRequest) {
     const slugName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     
     // Cek apakah content type dengan name yang sama sudah ada
-    const { data: existingType, error: checkError } = await supabase
+    const { data: existingType } = await supabase
       .from('content_types')
       .select('id')
       .eq('name', slugName)

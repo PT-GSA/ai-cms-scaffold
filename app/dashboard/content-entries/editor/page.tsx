@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -56,17 +56,7 @@ function ContentEntryEditorContent() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [entryId, setEntryId] = useState<string | null>(null)
 
-  // Load entry data if editing
-  useEffect(() => {
-    const id = searchParams.get('id')
-    if (id) {
-      setIsEditMode(true)
-      setEntryId(id)
-      loadEntryData(id)
-    }
-  }, [searchParams])
-
-  const loadEntryData = async (id: string) => {
+  const loadEntryData = useCallback(async (id: string) => {
     try {
       setLoading(true)
       const response = await fetch(`/api/content-entries/${id}`)
@@ -102,7 +92,17 @@ function ContentEntryEditorContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast, router, setTitle, setSlug, setStatus, setContent, setExcerpt, setLoading])
+
+  // Load entry data if editing
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (id) {
+      setIsEditMode(true)
+      setEntryId(id)
+      loadEntryData(id)
+    }
+  }, [searchParams, loadEntryData])
 
   const handleSave = async () => {
     try {

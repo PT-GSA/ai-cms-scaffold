@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { useToast } from '@/hooks/use-toast'
-import { ArrowLeft, Save, FileText, Calendar, User, BookOpen } from 'lucide-react'
+import { Save, FileText, Calendar, User, BookOpen } from 'lucide-react'
 
 interface ContentType {
   id: string

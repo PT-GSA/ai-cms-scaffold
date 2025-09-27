@@ -6,7 +6,7 @@ import { withInputSanitization, getSanitizedBody } from '@/lib/input-sanitizer-m
  * GET /api/api-keys
  * Mengambil daftar API keys user
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createServerSupabaseClient()
 

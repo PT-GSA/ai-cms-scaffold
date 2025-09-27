@@ -23,13 +23,7 @@ interface ContentEntryValue {
   content_type_fields: ContentTypeField
 }
 
-interface ContentType {
-  id: string
-  name: string
-  display_name: string
-  icon: string | null
-  content_type_fields?: ContentTypeField[]
-}
+
 
 /**
  * GET /api/content-entries/[id]

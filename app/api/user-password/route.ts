@@ -46,7 +46,7 @@ async function putHandler(request: NextRequest) {
     }
 
     // Update password
-    const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+    const { error: updateError } = await supabase.auth.updateUser({
       password: new_password
     })
 
