@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DragDropList, DragDropCard } from '@/components/drag-drop-list'
 
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
@@ -408,6 +409,50 @@ export default function ContentEntriesPage() {
   }
 
   /**
+   * Handle reorder entries
+   */
+  const handleReorder = async (newOrder: ContentEntry[]) => {
+    try {
+      // Update local state immediately for better UX
+      setEntries(newOrder)
+      
+      // Send reorder request to API
+      const response = await fetch('/api/content-entries/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entries: newOrder.map((entry, index) => ({
+            id: entry.id,
+            order: index
+          }))
+        })
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        // Revert on error
+        fetchEntries()
+        throw new Error(result.error || 'Failed to reorder entries')
+      }
+
+      toast({
+        title: 'Berhasil',
+        description: 'Urutan content entries berhasil diperbarui'
+      })
+    } catch (error) {
+      console.error('Error reordering entries:', error)
+      toast({
+        title: 'Error',
+        description: 'Gagal mengubah urutan content entries',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  /**
    * Delete content entry
    */
   const handleDelete = async (id: string) => {
@@ -437,6 +482,23 @@ export default function ContentEntriesPage() {
         variant: 'destructive'
       })
     }
+  }
+
+  /**
+   * Preview content entry
+   */
+  const handlePreview = (entry: ContentEntry) => {
+    // Open preview in new tab
+    const previewUrl = `/preview/${entry.slug}`
+    window.open(previewUrl, '_blank')
+  }
+
+  /**
+   * Edit content entry
+   */
+  const handleEdit = (entry: ContentEntry) => {
+    // Navigate to edit page
+    router.push(`/dashboard/content-entries/editor?id=${entry.id}`)
   }
 
   /**
@@ -613,15 +675,18 @@ export default function ContentEntriesPage() {
                   </div>
                 </div>
               ) : viewMode === 'grid' ? (
-                // Grid View - Responsive
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {entries.map((entry) => (
-                    <Card key={entry.id} className="hover:shadow-md transition-shadow">
+                // Grid View with Drag & Drop
+                <DragDropCard
+                  items={entries}
+                  onReorder={handleReorder}
+                  columns={4}
+                  renderItem={(entry) => (
+                    <Card className="hover:shadow-md transition-shadow">
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between">
                           <div className="flex-shrink-0">
-                          {getIconComponent(entry.content_type.icon)}
-                        </div>
+                            {getIconComponent(entry.content_type.icon)}
+                          </div>
                           <Badge variant={getStatusVariant(entry.status)} className="text-xs">
                             {entry.status}
                           </Badge>
@@ -646,10 +711,22 @@ export default function ContentEntriesPage() {
                         </div>
                         <div className="flex items-center justify-between mt-4">
                           <div className="flex items-center space-x-1">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0"
+                              onClick={() => handlePreview(entry)}
+                              title="Preview"
+                            >
                               <Eye className="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEdit(entry)}
+                              title="Edit"
+                            >
                               <Edit className="h-3 w-3" />
                             </Button>
                           </div>
@@ -667,16 +744,15 @@ export default function ContentEntriesPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                  )}
+                />
               ) : (
-                // List View - Responsive
-                <div className="space-y-3">
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3"
-                    >
+                // List View with Drag & Drop
+                <DragDropList
+                  items={entries}
+                  onReorder={handleReorder}
+                  renderItem={(entry) => (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3">
                       <div className="flex items-start sm:items-center space-x-3 flex-1 min-w-0">
                         <div className="flex-shrink-0 mt-1 sm:mt-0">
                           {getIconComponent(entry.content_type.icon)}
@@ -713,10 +789,22 @@ export default function ContentEntriesPage() {
                       </div>
 
                       <div className="flex items-center space-x-2 self-end sm:self-center">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handlePreview(entry)}
+                          title="Preview"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEdit(entry)}
+                          title="Edit"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -732,8 +820,8 @@ export default function ContentEntriesPage() {
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                />
               )}
             </CardContent>
           </Card>

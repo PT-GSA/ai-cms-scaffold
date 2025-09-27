@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Interface for API key data
+interface ApiKeyData {
+  id: string
+  user_id: string
+  key_name: string
+  key_type: string
+  key_value: string
+  is_active: boolean
+  expires_at?: string
+  last_used_at?: string
+}
+
+// Extended NextRequest interface to include apiKeyData
+interface ExtendedNextRequest extends NextRequest {
+  apiKeyData?: ApiKeyData
+}
+
 // Supabase client untuk validasi API key
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +30,7 @@ const supabase = createClient(
 export async function validateApiKey(request: NextRequest): Promise<{
   isValid: boolean
   error?: string
-  apiKeyData?: any
+  apiKeyData?: ApiKeyData
 }> {
   try {
     // Ambil API key dari header
@@ -79,7 +96,7 @@ export async function validateApiKey(request: NextRequest): Promise<{
 /**
  * Higher-order function untuk wrap API handlers dengan validasi API key
  */
-export function withApiKeyValidation<T extends any[]>(
+export function withApiKeyValidation<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
@@ -93,7 +110,7 @@ export function withApiKeyValidation<T extends any[]>(
     }
 
     // Tambahkan API key data ke request untuk digunakan di handler
-    ;(request as any).apiKeyData = validation.apiKeyData
+    ;(request as ExtendedNextRequest).apiKeyData = validation.apiKeyData
 
     return handler(request, ...args)
   }

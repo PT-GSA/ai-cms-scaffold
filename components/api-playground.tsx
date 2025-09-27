@@ -154,7 +154,7 @@ export function ApiPlayground() {
   const [apiKey, setApiKey] = useState('')
   const [response, setResponse] = useState<{
     status: number
-    data: any
+    data: unknown
     headers: Record<string, string>
   } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -245,7 +245,7 @@ export function ApiPlayground() {
         try {
           JSON.parse(requestBody) // Validasi JSON
           options.body = requestBody
-        } catch (error) {
+        } catch {
           throw new Error('Invalid JSON in request body')
         }
       }

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const settings = data?.reduce((acc, item) => {
       acc[item.settings_type] = item.settings_data
       return acc
-    }, {} as Record<string, any>) || {}
+    }, {} as Record<string, unknown>) || {}
 
     return NextResponse.json({
       success: true,

@@ -41,6 +41,15 @@ interface UserProfile {
   updated_at: string
 }
 
+interface ApiKey {
+  id: string
+  key_name: string
+  key_type: string
+  key_value: string
+  is_active: boolean
+  created_at: string
+}
+
 interface SettingsData {
   profile: UserProfile | null
   theme: 'dark' | 'light'
@@ -95,11 +104,11 @@ export default function SettingsPage() {
   })
 
   // API Keys state
-  const [apiKeys, setApiKeys] = useState<any[]>([])
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
   const [newKeyName, setNewKeyName] = useState('')
   const [newKeyType, setNewKeyType] = useState('production')
-  const [generatedKey, setGeneratedKey] = useState<any>(null)
+  const [generatedKey, setGeneratedKey] = useState<ApiKey | null>(null)
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set())
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
@@ -421,7 +430,7 @@ export default function SettingsPage() {
   /**
    * Handle save settings
    */
-  const handleSaveSettings = async (settingsType: string, settingsData: any) => {
+  const handleSaveSettings = async (settingsType: string, settingsData: Record<string, unknown>) => {
     setIsLoading(true)
     try {
       const response = await fetch('/api/user-settings', {

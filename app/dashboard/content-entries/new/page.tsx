@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { DashboardLayout } from '@/components/dashboard-layout'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, Save, FileText, Calendar, User, BookOpen } from 'lucide-react'
 
@@ -358,23 +359,13 @@ function NewContentEntryPageContent() {
   }, [contentTypes, loadTemplateData, toast])
 
   return (
-    <div className="min-h-screen bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <DashboardLayout>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <Button
-              variant="ghost"
-              onClick={() => router.back()}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Kembali</span>
-            </Button>
-          </div>
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Buat Entry Baru</h1>
+              <h1 className="text-3xl font-bold text-white">Buat Entry Baru</h1>
               {templateData && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <BookOpen className="h-3 w-3" />
@@ -382,7 +373,7 @@ function NewContentEntryPageContent() {
                 </Badge>
               )}
             </div>
-            <p className="text-gray-600 mt-2">
+            <p className="text-white mt-2">
               {templateData
                 ? `Menggunakan template "${String(templateData.template_name)}" sebagai starting point`
                 : 'Buat content entry baru dengan mengisi form di bawah ini'
@@ -533,7 +524,7 @@ function NewContentEntryPageContent() {
           )}
         </form>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 

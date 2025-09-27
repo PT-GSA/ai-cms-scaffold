@@ -7,12 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-/**
- * GET /api/public/content-entries/[slug]
- * Mengambil single content entry berdasarkan slug
- * Query parameters:
- * - content_type: slug dari content type (required)
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -150,7 +144,13 @@ export async function PUT(
     }
 
     // Update content entry
-    const updateData: any = {
+    const updateData: {
+      data: unknown
+      updated_at: string
+      meta_data?: unknown
+      status?: string
+      published_at?: string
+    } = {
       data,
       updated_at: new Date().toISOString()
     };

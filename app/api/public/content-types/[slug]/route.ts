@@ -126,7 +126,12 @@ async function putHandler(
     }
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: {
+      updated_at: string
+      display_name?: string
+      description?: string
+      is_active?: boolean
+    } = {
       updated_at: new Date().toISOString()
     };
 
@@ -270,7 +275,7 @@ async function deleteHandler(
     }
 
     // Cek apakah ada content entries yang menggunakan content type ini
-    const { data: entries, error: entriesError } = await supabase
+    const { data: entries } = await supabase
       .from('content_entries')
       .select('id')
       .eq('content_type_id', (

@@ -31,21 +31,6 @@ interface ContentType {
   content_type_fields?: ContentTypeField[]
 }
 
-interface ContentEntryData {
-  id: string
-  content_type_id: string
-  title: string
-  slug: string
-  status: string
-  published_at: string | null
-  created_by: string
-  updated_by: string
-  created_at: string
-  updated_at: string
-  content_types: ContentType
-  content_entry_values?: ContentEntryValue[]
-}
-
 /**
  * GET /api/content-entries/[id]
  * Mengambil content entry berdasarkan ID
@@ -63,40 +48,7 @@ export async function GET(
     // Fetch content entry dengan atau tanpa field values
     const query = supabase
       .from('content_entries')
-      .select(`
-        id,
-        content_type_id,
-        title,
-        slug,
-        status,
-        published_at,
-        created_by,
-        updated_by,
-        created_at,
-        updated_at,
-        content_types!inner(
-          id,
-          name,
-          display_name,
-          icon
-        )
-        ${includeFields ? `, content_entry_values(
-          id,
-          content_type_field_id,
-          text_value,
-          number_value,
-          boolean_value,
-          date_value,
-          datetime_value,
-          json_value,
-          content_type_fields!inner(
-            id,
-            field_name,
-            field_type,
-            display_name
-          )
-        )` : ''}
-      `)
+      .select('*, content_entry_values(*, content_type_fields(*))')
       .eq('id', id)
       .single()
 
@@ -116,10 +68,21 @@ export async function GET(
       )
     }
 
-    // Transform field values jika includeFields true
-    if (includeFields && data && 'content_entry_values' in data && Array.isArray(data.content_entry_values)) {
-      const fieldValues: Record<string, unknown> = {}
+    // Get content type information
+    const { data: contentType } = await supabase
+      .from('content_types')
+      .select('id, name, display_name, icon')
+      .eq('id', data.content_type_id)
+      .single()
 
+    // Handle fields - check if using data column or content_entry_values table
+    let fieldsObject: Record<string, unknown> = {}
+    
+    if (data.data) {
+      // Use data column (legacy structure)
+      fieldsObject = data.data as Record<string, unknown>
+    } else if (includeFields && data && 'content_entry_values' in data && Array.isArray(data.content_entry_values)) {
+      // Transform field values dari content_entry_values table
       data.content_entry_values.forEach((value: ContentEntryValue) => {
         const fieldName = value.content_type_fields.field_name
         const fieldType = value.content_type_fields.field_type
@@ -154,25 +117,22 @@ export async function GET(
             fieldValue = value.text_value
         }
         
-        fieldValues[fieldName] = fieldValue
-      })
-      
-      // Create transformed data object
-      const transformedData = {
-        ...(data as unknown as ContentEntryData),
-        field_values: fieldValues
-      }
-      delete transformedData.content_entry_values
-      
-      return NextResponse.json({
-        success: true,
-        data: transformedData
+        fieldsObject[fieldName] = fieldValue
       })
     }
+    
+    // Create transformed data object
+    const transformedData = {
+      ...data,
+      title: (fieldsObject.title as string) || data.title || '', // Ambil title dari data JSONB atau fallback ke kolom title
+      content_type: contentType,
+      fields: fieldsObject
+    }
+    delete (transformedData as { content_entry_values?: unknown }).content_entry_values
 
     return NextResponse.json({
       success: true,
-      data
+      data: transformedData
     })
 
   } catch (error) {
@@ -213,46 +173,72 @@ async function putHandler(
     const sanitizedBody = getSanitizedBody(request);
     const body = sanitizedBody || await request.json()
     
-    const { title, slug, status, published_at, field_values } = body
+    const { title, slug, status, field_values } = body
 
-    // Validasi input
-    if (!title) {
+    // Validasi input minimal untuk update
+    if (!slug) {
       return NextResponse.json(
-        { error: 'Title is required' },
+        { error: 'Slug is required' },
         { status: 400 }
       )
     }
 
-    // Update content entry
+    // Update content entry dengan minimal changes untuk menghindari trigger error
+    const updateData: Record<string, unknown> = {}
+    
+    // Hanya update field yang benar-benar diperlukan
+    if (slug && slug !== '') {
+      updateData.slug = slug
+    }
+    
+    if (status) {
+      updateData.status = status
+    }
+    
+    // Update kolom data dengan field values jika ada, termasuk title
+    if (field_values && Object.keys(field_values).length > 0) {
+      // Ambil data yang sudah ada terlebih dahulu
+      const { data: existingEntry } = await supabase
+        .from('content_entries')
+        .select('data')
+        .eq('id', id)
+        .single()
+      
+      const existingData = (existingEntry?.data as Record<string, unknown>) || {}
+      
+      // Merge dengan data baru, termasuk title jika ada
+      const newData = { ...existingData, ...(field_values as Record<string, unknown>) }
+      if (title && title !== '') {
+        newData.title = title
+      }
+      
+      updateData.data = newData
+    } else if (title && title !== '') {
+      // Jika hanya title yang diupdate tanpa field_values
+      const { data: existingEntry } = await supabase
+        .from('content_entries')
+        .select('data')
+        .eq('id', id)
+        .single()
+      
+      const existingData = (existingEntry?.data as Record<string, unknown>) || {}
+      updateData.data = { ...existingData, title }
+    }
+    
+    // Hanya update jika ada data yang akan diupdate
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No data to update' },
+        { status: 400 }
+      )
+    }
+
+    // Update content entry - skip versioning untuk sementara
     const { data: entry, error: entryError } = await supabase
       .from('content_entries')
-      .update({
-        title,
-        slug,
-        status,
-        published_at: status === 'published' && !published_at ? new Date().toISOString() : published_at,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
-      .select(`
-        id,
-        content_type_id,
-        title,
-        slug,
-        status,
-        content_types!inner(
-          id,
-          name,
-          display_name,
-          content_type_fields(
-            id,
-            field_name,
-            field_type,
-            display_name,
-            is_required
-          )
-        )
-      `)
+      .select('*')
       .single()
 
     if (entryError) {
@@ -267,88 +253,6 @@ async function putHandler(
         { error: 'Failed to update content entry' },
         { status: 500 }
       )
-    }
-
-    // Update field values jika ada
-    if (field_values && Object.keys(field_values).length > 0) {
-      // Get field definitions
-      const fieldMap = new Map()
-      const contentType = entry.content_types as unknown as ContentType
-      if (contentType && contentType.content_type_fields) {
-        contentType.content_type_fields.forEach((field: ContentTypeField) => {
-          fieldMap.set(field.field_name, field)
-        })
-      }
-
-      // Delete existing field values
-      const { error: deleteError } = await supabase
-        .from('content_entry_values')
-        .delete()
-        .eq('content_entry_id', id)
-
-      if (deleteError) {
-        console.error('Error deleting old field values:', deleteError)
-        return NextResponse.json(
-          { error: 'Failed to update field values' },
-          { status: 500 }
-        )
-      }
-
-      // Insert new field values
-      const fieldValuesToInsert = Object.entries(field_values).map(([fieldName, value]) => {
-        const fieldDef = fieldMap.get(fieldName)
-        if (!fieldDef) {
-          throw new Error(`Field ${fieldName} not found in content type`)
-        }
-
-        const entryValue: Record<string, unknown> = {
-          content_entry_id: id,
-          content_type_field_id: fieldDef.id,
-        }
-
-        // Set nilai berdasarkan tipe field
-        switch (fieldDef.field_type) {
-          case 'text':
-          case 'textarea':
-          case 'rich_text':
-          case 'select':
-            entryValue.text_value = value
-            break
-          case 'number':
-            entryValue.number_value = typeof value === 'string' ? parseFloat(value as string) : value
-            break
-          case 'boolean':
-            entryValue.boolean_value = typeof value === 'string' ? value === 'true' : value
-            break
-          case 'date':
-            entryValue.date_value = value
-            break
-          case 'datetime':
-            entryValue.datetime_value = value
-            break
-          case 'multi_select':
-          case 'media':
-          case 'relation':
-            entryValue.json_value = typeof value === 'string' ? JSON.parse(value as string) : value
-            break
-          default:
-            entryValue.text_value = value
-        }
-
-        return entryValue
-      })
-
-      const { error: valuesError } = await supabase
-        .from('content_entry_values')
-        .insert(fieldValuesToInsert)
-
-      if (valuesError) {
-        console.error('Error inserting field values:', valuesError)
-        return NextResponse.json(
-          { error: 'Failed to update field values' },
-          { status: 500 }
-        )
-      }
     }
 
     return NextResponse.json({

@@ -6,7 +6,7 @@ import { withInputSanitization, getSanitizedBody } from '@/lib/input-sanitizer-m
  * GET /api/user-profile
  * Mengambil profil user
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createServerSupabaseClient()
 
@@ -77,7 +77,7 @@ async function putHandler(request: NextRequest) {
     }
 
     // Update user metadata
-    const updateData: any = {}
+    const updateData: { full_name?: string; email?: string } = {}
     if (full_name) {
       updateData.full_name = full_name
     }
