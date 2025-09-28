@@ -22,7 +22,8 @@ import {
   Search,
   Bell,
   Image,
-  Play
+  Play,
+  Link
 } from "lucide-react"
 import { ThemeToggleCompact } from "@/components/theme-toggle"
 
@@ -86,6 +87,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               label="Content Entries"
               href="/dashboard/content-entries"
               isActive={pathname === "/dashboard/content-entries"}
+            />
+            <SidebarItem
+              icon={<Link className="h-5 w-5" />}
+              label="Relations"
+              href="/dashboard/relations"
+              isActive={pathname === "/dashboard/relations" || pathname.startsWith("/dashboard/relations/")}
+              badge="New"
             />
             <SidebarItem
               // eslint-disable-next-line jsx-a11y/alt-text
