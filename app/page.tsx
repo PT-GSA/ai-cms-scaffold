@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Database, Zap, Shield, Code } from "lucide-react"
+import { Database, Zap, Shield, Code, BookOpen, Globe } from "lucide-react"
 
 export default function HomePage() {
   return (
@@ -40,6 +40,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <Link href="/dashboard">
               <Button
@@ -48,6 +49,16 @@ export default function HomePage() {
               >
                 Go to Dashboard
                 <Zap className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/api-docs">
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-xl px-8 py-4 text-lg font-semibold border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white transition-all hover:scale-105"
+              >
+                <Code className="mr-2 h-5 w-5" />
+                API Documentation
               </Button>
             </Link>
           </motion.div>
@@ -104,7 +115,7 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -122,6 +133,108 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* API Section */}
+      <section className="py-20 px-4 bg-gray-900/30">
+        <div className="mx-auto max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl font-bold text-white mb-4">Comprehensive API Documentation</h2>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              Access our full API documentation with interactive examples, request/response samples, and live testing capabilities. 
+              No login required to explore our public endpoints.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="mb-4 inline-flex rounded-xl bg-green-500/10 p-3">
+                <Globe className="h-8 w-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Public APIs</h3>
+              <p className="text-gray-400 mb-4">
+                Access content types, entries, and media without authentication. Perfect for frontend applications.
+              </p>
+              <div className="text-sm text-gray-500">
+                <div>• GET /api/public/content-types</div>
+                <div>• GET /api/public/content-entries</div>
+                <div>• GET /api/public/media</div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="mb-4 inline-flex rounded-xl bg-blue-500/10 p-3">
+                <Code className="h-8 w-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Interactive Testing</h3>
+              <p className="text-gray-400 mb-4">
+                Test API endpoints directly from the documentation with built-in request/response examples.
+              </p>
+              <div className="text-sm text-gray-500">
+                <div>• Live API testing</div>
+                <div>• Request/Response examples</div>
+                <div>• Copy-paste ready code</div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="mb-4 inline-flex rounded-xl bg-purple-500/10 p-3">
+                <Database className="h-8 w-8 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Admin APIs</h3>
+              <p className="text-gray-400 mb-4">
+                Full CRUD operations, AI features, team management, and advanced content operations.
+              </p>
+              <div className="text-sm text-gray-500">
+                <div>• Content management</div>
+                <div>• AI-powered generation</div>
+                <div>• Team collaboration</div>
+              </div>
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <Link href="/api-docs">
+              <Button
+                size="lg"
+                className="rounded-xl px-8 py-4 text-lg font-semibold shadow-xl transition-all hover:scale-105 hover:shadow-2xl bg-gradient-to-r from-primary to-emerald-400"
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                Explore API Documentation
+              </Button>
+            </Link>
+          </motion.div>
         </div>
       </section>
     </div>
@@ -143,5 +256,10 @@ const features = [
     icon: Shield,
     title: "Secure & Scalable",
     description: "Enterprise-grade security with row-level security policies and scalable PostgreSQL infrastructure.",
+  },
+  {
+    icon: Code,
+    title: "RESTful API",
+    description: "Comprehensive API documentation with public endpoints for content management and admin endpoints for full control.",
   },
 ]

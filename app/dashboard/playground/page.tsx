@@ -3,7 +3,6 @@
 import { useAuth } from "@/lib/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { ApiPlayground } from '@/components/api-playground'
-import { DatabaseSetup } from '@/components/database-setup'
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
@@ -36,10 +35,6 @@ export default function PlaygroundPage() {
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-6 p-6 md:p-8">
-        {/* Database Setup */}
-        <div className="w-full">
-          <DatabaseSetup />
-        </div>
         
         {/* API Playground */}
         <div className="w-full">
