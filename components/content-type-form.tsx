@@ -94,6 +94,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
   // State untuk fields management
   const [fields, setFields] = useState<ContentTypeField[]>([])
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'manual' | 'ai'>('manual')
 
   // Initialize form data
   useEffect(() => {
@@ -332,7 +333,24 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
       {/* Content Type Basic Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Informasi Content Type</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Informasi Content Type</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Isi informasi dasar, lalu gunakan AI untuk auto generate fields yang relevan
+              </p>
+            </div>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => setActiveTab('ai')}
+              className="flex items-center space-x-2"
+            >
+              <Wand2 className="h-4 w-4" />
+              <span>Auto Generate Fields</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -398,10 +416,27 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
       {/* Fields Management dengan Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>Fields Management</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Fields Management</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Buat fields manual atau gunakan AI untuk auto generate berdasarkan kebutuhan
+              </p>
+            </div>
+            <Button 
+              type="button" 
+              variant="default" 
+              size="sm"
+              onClick={() => setActiveTab('ai')}
+              className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              <Wand2 className="h-4 w-4" />
+              <span>Generate dengan AI</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="manual" className="w-full">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'ai')} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="manual" className="flex items-center space-x-2">
                 <Plus className="h-4 w-4" />

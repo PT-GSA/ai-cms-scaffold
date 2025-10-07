@@ -57,7 +57,15 @@ export default function ContentTypesPage() {
   const fetchContentTypes = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/content-types?include_fields=true')
+      // Add cache busting parameter
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/content-types?include_fields=true&_t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
       
       if (!response.ok) {
         throw new Error('Failed to fetch content types')
@@ -125,6 +133,12 @@ export default function ContentTypesPage() {
 
       // Refresh list and close modal
       await fetchContentTypes()
+      
+      // Force refresh sebagai fallback untuk memastikan UI terupdate
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+      
       setShowFormModal(false)
       setEditingContentType(null)
 
@@ -139,17 +153,21 @@ export default function ContentTypesPage() {
    */
   const handleDelete = async (contentType: ContentType) => {
     try {
-      const response = await fetch(`/api/content-types/${contentType.id}`, {
+      const url = `/api/content-types/${contentType.id}`
+        
+      const response = await fetch(url, {
         method: 'DELETE'
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to delete content type')
+        throw new Error(result.error || 'Failed to delete content type')
       }
 
       toast({
         title: "Berhasil",
-        description: `Content type "${contentType.display_name}" berhasil dihapus`
+        description: result.message || `Content type "${contentType.display_name}" berhasil dihapus`
       })
 
       // Refresh list
@@ -160,7 +178,7 @@ export default function ContentTypesPage() {
       console.error('Error deleting content type:', error)
       toast({
         title: "Error",
-        description: "Gagal menghapus content type",
+        description: error instanceof Error ? error.message : "Gagal menghapus content type",
         variant: "destructive"
       })
     }
@@ -453,10 +471,17 @@ export default function ContentTypesPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-card p-4 sm:p-6 rounded-lg max-w-full sm:max-w-md w-full">
               <h2 className="text-lg sm:text-xl font-bold text-white mb-4">Confirm Delete</h2>
-              <p className="text-gray-400 mb-6 text-sm sm:text-base break-words">
-                Are you sure you want to delete the content type &quot;{selectedContentType.display_name}&quot;? 
-                This action cannot be undone.
-              </p>
+              <div className="space-y-4 mb-6">
+                <p className="text-gray-400 text-sm sm:text-base break-words">
+                  Are you sure you want to permanently delete the content type &quot;{selectedContentType.display_name}&quot;?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-800 text-sm">
+                    <strong>Warning:</strong> This action will permanently delete the content type and all its fields. 
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                 <Button
                   variant="outline"
@@ -470,7 +495,7 @@ export default function ContentTypesPage() {
                   onClick={() => handleDelete(selectedContentType)}
                   className="w-full sm:w-auto order-1 sm:order-2"
                 >
-                  Delete
+                  Delete Permanently
                 </Button>
               </div>
             </div>

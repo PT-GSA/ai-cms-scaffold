@@ -174,10 +174,31 @@ export async function PUT(
       .eq('id', id)
       .single()
 
+    // Revalidate cache untuk content types
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/revalidate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paths: ['/dashboard/content-types', '/api/content-types']
+        })
+      })
+    } catch (revalidateError) {
+      console.warn('Failed to revalidate cache:', revalidateError)
+    }
+
     return NextResponse.json({
       success: true,
       data: updatedContentType,
       message: 'Content type updated successfully'
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     })
 
   } catch (error) {
@@ -201,7 +222,7 @@ export async function DELETE(
     const { id } = await params
     const supabase = await createServerSupabaseClient()
     const { searchParams } = new URL(request.url)
-    const hardDelete = searchParams.get('hard') === 'true'
+    const softDelete = searchParams.get('soft') === 'true'
 
     // Cek apakah ada content entries yang menggunakan content type ini
     const { data: entries, error: entriesError } = await supabase
@@ -218,33 +239,14 @@ export async function DELETE(
       )
     }
 
-    if (entries && entries.length > 0 && hardDelete) {
+    if (entries && entries.length > 0 && !softDelete) {
       return NextResponse.json(
         { error: 'Cannot delete content type with existing entries. Delete entries first or use soft delete.' },
         { status: 409 }
       )
     }
 
-    if (hardDelete && (!entries || entries.length === 0)) {
-      // Hard delete - hapus content type dan fields
-      const { error: deleteError } = await supabase
-        .from('content_types')
-        .delete()
-        .eq('id', id)
-
-      if (deleteError) {
-        console.error('Error deleting content type:', deleteError)
-        return NextResponse.json(
-          { error: 'Failed to delete content type' },
-          { status: 500 }
-        )
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Content type deleted permanently'
-      })
-    } else {
+    if (softDelete) {
       // Soft delete - set is_active = false
       const { data, error: updateError } = await supabase
         .from('content_types')
@@ -271,6 +273,46 @@ export async function DELETE(
         success: true,
         data,
         message: 'Content type deactivated successfully'
+      })
+    } else {
+      // Hard delete - hapus content type dan fields (default behavior)
+      const { error: deleteError } = await supabase
+        .from('content_types')
+        .delete()
+        .eq('id', id)
+
+      if (deleteError) {
+        console.error('Error deleting content type:', deleteError)
+        return NextResponse.json(
+          { error: 'Failed to delete content type' },
+          { status: 500 }
+        )
+      }
+
+      // Revalidate cache untuk content types
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/revalidate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paths: ['/dashboard/content-types', '/api/content-types']
+          })
+        })
+      } catch (revalidateError) {
+        console.warn('Failed to revalidate cache:', revalidateError)
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Content type deleted permanently'
+      }, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       })
     }
 

@@ -178,11 +178,33 @@ async function postHandler(request: NextRequest) {
       .eq('id', contentType.id)
       .single()
 
+    // Revalidate cache untuk content types
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/revalidate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paths: ['/dashboard/content-types', '/api/content-types']
+        })
+      })
+    } catch (revalidateError) {
+      console.warn('Failed to revalidate cache:', revalidateError)
+    }
+
     return NextResponse.json({
       success: true,
       data: completeContentType,
       message: 'Content type created successfully'
-    }, { status: 201 })
+    }, { 
+      status: 201,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
 
   } catch (error) {
     console.error('Unexpected error:', error)
