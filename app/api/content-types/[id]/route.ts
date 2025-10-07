@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 
 /**
  * GET /api/content-types/[id]
@@ -11,7 +12,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const supabase = await createServerSupabaseClient()
+    const supabase = createAdminSupabaseClient()
     const { searchParams } = new URL(request.url)
     const includeFields = searchParams.get('include_fields') !== 'false' // default true
 
@@ -87,7 +88,14 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const supabase = await createServerSupabaseClient()
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Content type ID is required' },
+        { status: 400 }
+      )
+    }
+    const supabase = createAdminSupabaseClient()
     const body = await request.json()
 
     const { display_name, description, icon, is_active, fields } = body
@@ -220,7 +228,15 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const supabase = await createServerSupabaseClient()
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Content type ID is required' },
+        { status: 400 }
+      )
+    }
+    
+    const supabase = createAdminSupabaseClient()
     const { searchParams } = new URL(request.url)
     const softDelete = searchParams.get('soft') === 'true'
 

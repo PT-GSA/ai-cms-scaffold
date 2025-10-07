@@ -66,6 +66,7 @@ interface ContentType {
   created_at?: string
   updated_at?: string
   fields?: ContentTypeField[]
+  content_type_fields?: ContentTypeField[]
 }
 
 interface ContentTypeFormProps {
@@ -100,7 +101,9 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
   useEffect(() => {
     if (contentType) {
       setFormData(contentType)
-      setFields(contentType.fields || [])
+      // Handle both 'fields' and 'content_type_fields' for compatibility
+      const fieldsData = contentType.fields || contentType.content_type_fields || []
+      setFields(fieldsData)
     }
   }, [contentType])
 
