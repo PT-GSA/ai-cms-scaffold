@@ -111,6 +111,7 @@ export default function SettingsPage() {
   const [generatedKey, setGeneratedKey] = useState<ApiKey | null>(null)
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set())
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [revealedKeys, setRevealedKeys] = useState<Record<string, string>>({})
 
   /**
    * Load user settings from database
@@ -170,7 +171,12 @@ export default function SettingsPage() {
         if (response.ok) {
           const result = await response.json()
           console.log('API keys loaded:', result.data)
-          setApiKeys(result.data || [])
+          const keys = result.data || []
+          setApiKeys(keys)
+          // Inisialisasi semua key sebagai tersembunyi saat pertama kali dimuat
+          setHiddenKeys(new Set(keys.map((k: ApiKey) => k.id)))
+          // Reset revealedKeys saat reload
+          setRevealedKeys({})
         } else {
           const errorResult = await response.json()
           console.error('Failed to load API keys:', errorResult.error)
@@ -269,16 +275,42 @@ export default function SettingsPage() {
   /**
    * Toggle hide/unhide API key
    */
-  const toggleKeyVisibility = (keyId: string) => {
-    setHiddenKeys(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(keyId)) {
-        newSet.delete(keyId)
-      } else {
-        newSet.add(keyId)
+  const toggleKeyVisibility = async (keyId: string) => {
+    const currentlyHidden = hiddenKeys.has(keyId)
+    if (currentlyHidden) {
+      try {
+        const response = await fetch(`/api/api-keys/${keyId}`)
+        const result = await response.json()
+        if (response.ok && result.success && result.data?.key_value) {
+          setRevealedKeys(prevMap => ({ ...prevMap, [keyId]: result.data.key_value }))
+          setHiddenKeys(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(keyId)
+            return newSet
+          })
+        } else {
+          toast({
+            title: 'Error',
+            description: result.error || 'Gagal menampilkan API key asli.',
+            variant: 'destructive'
+          })
+        }
+      } catch (error) {
+        console.error('Error revealing API key:', error)
+        toast({
+          title: 'Error',
+          description: 'Terjadi kesalahan saat memuat API key.',
+          variant: 'destructive'
+        })
       }
-      return newSet
-    })
+    } else {
+      // Sembunyikan kembali
+      setHiddenKeys(prev => {
+        const newSet = new Set(prev)
+        newSet.add(keyId)
+        return newSet
+      })
+    }
   }
 
   /**
@@ -919,7 +951,7 @@ export default function SettingsPage() {
                                 <p className="text-white font-medium">{key.key_name}</p>
                                 <div className="flex items-center space-x-2 mt-1">
                                   <p className="text-sm text-gray-400 font-mono">
-                                    {isHidden ? getMaskedKey(key.key_value) : key.key_value}
+                                    {isHidden ? getMaskedKey(key.key_value) : (revealedKeys[key.id] || key.key_value)}
                                   </p>
                                 </div>
                                 <p className="text-xs text-white mt-1">
@@ -944,7 +976,7 @@ export default function SettingsPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => copyApiKey(key.key_value, key.id)}
+                                onClick={() => copyApiKey(isHidden ? getMaskedKey(key.key_value) : (revealedKeys[key.id] || key.key_value), key.id)}
                                 title="Copy key"
                               >
                                 {isCopied ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
