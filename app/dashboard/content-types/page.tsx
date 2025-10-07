@@ -17,8 +17,8 @@ interface ContentTypeField {
   field_type: string
   is_required: boolean
   is_unique: boolean
-  default_value: string
-  help_text: string
+  default_value?: string
+  help_text?: string
   sort_order: number
   validation_rules?: Record<string, unknown>
   field_options?: Record<string, unknown>

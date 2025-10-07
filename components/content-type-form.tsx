@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, GripVertical, FileText, File, Package, Settings, Users, Calendar } from 'lucide-react'
+import { Plus, Trash2, GripVertical, FileText, File, Package, Settings, Users, Calendar, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
+import { AIFieldGenerator } from '@/components/ai-field-generator'
 
 // Field types yang didukung
 const FIELD_TYPES = [
@@ -47,8 +49,8 @@ interface ContentTypeField {
   field_type: string
   is_required: boolean
   is_unique: boolean
-  default_value: string
-  help_text: string
+  default_value?: string
+  help_text?: string
   sort_order: number
   validation_rules?: Record<string, unknown>
   field_options?: Record<string, unknown>
@@ -140,6 +142,30 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
     }
 
     setFields(prev => [...prev, newField])
+  }
+
+  /**
+   * Handle AI generated fields
+   */
+  const handleAIGeneratedFields = (aiFields: ContentTypeField[]) => {
+    // Merge AI fields with existing fields, avoiding duplicates
+    const existingFieldNames = fields.map(f => f.field_name.toLowerCase())
+    const newFields = aiFields.filter(field => 
+      !existingFieldNames.includes(field.field_name.toLowerCase())
+    )
+    
+    // Update sort orders
+    const mergedFields = [...fields, ...newFields].map((field, index) => ({
+      ...field,
+      sort_order: index
+    }))
+    
+    setFields(mergedFields)
+    
+    toast({
+      title: "Berhasil",
+      description: `${newFields.length} fields baru ditambahkan dari AI`
+    })
   }
 
   /**
@@ -369,139 +395,166 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
         </CardContent>
       </Card>
 
-      {/* Fields Management */}
+      {/* Fields Management dengan Tabs */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Fields</CardTitle>
-          <Button type="button" onClick={addField} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Field
-          </Button>
+        <CardHeader>
+          <CardTitle>Fields Management</CardTitle>
         </CardHeader>
         <CardContent>
-          {fields.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Belum ada fields. Klik &quot;Add Field&quot; untuk menambahkan.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <div
-                  key={index}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
-                  className="border rounded-lg p-4 bg-card cursor-move hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-start gap-4">
-                    <GripVertical className="h-5 w-5 text-muted-foreground mt-2 cursor-grab" />
-                    
-                    <div className="flex-1 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Display Name *</Label>
-                          <Input
-                            value={field.display_name}
-                            onChange={(e) => updateField(index, 'display_name', e.target.value)}
-                            placeholder="e.g., Title"
-                            required
-                          />
-                        </div>
+          <Tabs defaultValue="manual" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="manual" className="flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Manual Fields</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="flex items-center space-x-2">
+                <Wand2 className="h-4 w-4" />
+                <span>AI Generator</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="manual" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Manual Field Management</h3>
+                <Button type="button" onClick={addField} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Field
+                </Button>
+              </div>
+              
+              {fields.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Belum ada fields. Klik &quot;Add Field&quot; untuk menambahkan atau gunakan AI Generator.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {fields.map((field, index) => (
+                    <div
+                      key={index}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, index)}
+                      className="border rounded-lg p-4 bg-card cursor-move hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-start gap-4">
+                        <GripVertical className="h-5 w-5 text-muted-foreground mt-2 cursor-grab" />
                         
-                        <div className="space-y-2">
-                          <Label>Field Name *</Label>
-                          <Input
-                            value={field.field_name}
-                            onChange={(e) => updateField(index, 'field_name', e.target.value)}
-                            placeholder="e.g., title"
-                            required
-                          />
+                        <div className="flex-1 space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Display Name *</Label>
+                              <Input
+                                value={field.display_name}
+                                onChange={(e) => updateField(index, 'display_name', e.target.value)}
+                                placeholder="e.g., Title"
+                                required
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label>Field Name *</Label>
+                              <Input
+                                value={field.field_name}
+                                onChange={(e) => updateField(index, 'field_name', e.target.value)}
+                                placeholder="e.g., title"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Field Type *</Label>
+                              <Select 
+                                value={field.field_type} 
+                                onValueChange={(value) => updateField(index, 'field_type', value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {FIELD_TYPES.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      <div>
+                                        <div className="font-medium">{type.label}</div>
+                                        <div className="text-xs text-muted-foreground">{type.description}</div>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Default Value</Label>
+                              <Input
+                                value={field.default_value}
+                                onChange={(e) => updateField(index, 'default_value', e.target.value)}
+                                placeholder="Optional default value"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Help Text</Label>
+                            <Input
+                              value={field.help_text}
+                              onChange={(e) => updateField(index, 'help_text', e.target.value)}
+                              placeholder="Help text for content editors"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`required-${index}`}
+                                checked={field.is_required}
+                                onCheckedChange={(checked) => updateField(index, 'is_required', !!checked)}
+                              />
+                              <Label htmlFor={`required-${index}`}>Required</Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`unique-${index}`}
+                                checked={field.is_unique}
+                                onCheckedChange={(checked) => updateField(index, 'is_unique', !!checked)}
+                              />
+                              <Label htmlFor={`unique-${index}`}>Unique</Label>
+                            </div>
+
+                            <Badge variant="outline">
+                              Order: {field.sort_order + 1}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Field Type *</Label>
-                          <Select 
-                            value={field.field_type} 
-                            onValueChange={(value) => updateField(index, 'field_type', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {FIELD_TYPES.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  <div>
-                                    <div className="font-medium">{type.label}</div>
-                                    <div className="text-xs text-muted-foreground">{type.description}</div>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Default Value</Label>
-                          <Input
-                            value={field.default_value}
-                            onChange={(e) => updateField(index, 'default_value', e.target.value)}
-                            placeholder="Optional default value"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Help Text</Label>
-                        <Input
-                          value={field.help_text}
-                          onChange={(e) => updateField(index, 'help_text', e.target.value)}
-                          placeholder="Help text for content editors"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`required-${index}`}
-                            checked={field.is_required}
-                            onCheckedChange={(checked) => updateField(index, 'is_required', !!checked)}
-                          />
-                          <Label htmlFor={`required-${index}`}>Required</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`unique-${index}`}
-                            checked={field.is_unique}
-                            onCheckedChange={(checked) => updateField(index, 'is_unique', !!checked)}
-                          />
-                          <Label htmlFor={`unique-${index}`}>Unique</Label>
-                        </div>
-
-                        <Badge variant="outline">
-                          Order: {field.sort_order + 1}
-                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeField(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeField(index)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+            </TabsContent>
+            
+            <TabsContent value="ai" className="space-y-4">
+              <AIFieldGenerator
+                onFieldsGenerated={handleAIGeneratedFields}
+                contentTypeName={formData.display_name}
+                contentTypeDescription={formData.description}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
