@@ -63,7 +63,7 @@ export const POST = withInputSanitization(postHandler);
  */
 async function postHandler(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = createAdminSupabaseClient()
     
     // Gunakan sanitized body jika tersedia
     const sanitizedBody = getSanitizedBody(request);
@@ -102,16 +102,6 @@ async function postHandler(request: NextRequest) {
       )
     }
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
     // Insert content type
     const { data: contentType, error: contentTypeError } = await supabase
       .from('content_types')
@@ -119,8 +109,7 @@ async function postHandler(request: NextRequest) {
         name,
         display_name,
         description: description || null,
-        icon: icon || 'File',
-        created_by: user.id
+        icon: icon || 'File'
       })
       .select()
       .single()

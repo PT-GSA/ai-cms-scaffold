@@ -361,7 +361,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
               <Label htmlFor="display_name">Display Name *</Label>
               <Input
                 id="display_name"
-                value={formData.display_name}
+                value={formData.display_name || ''}
                 onChange={(e) => handleInputChange('display_name', e.target.value)}
                 placeholder="e.g., &quot;Blog Article&quot;"
                 required
@@ -372,7 +372,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
               <Label htmlFor="name">Name (System) *</Label>
               <Input
                 id="name"
-                value={formData.name}
+                value={formData.name || ''}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 placeholder="e.g., blog_article"
                 disabled={!!contentType}
@@ -385,7 +385,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              value={formData.description}
+              value={formData.description || ''}
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Describe what this content type is used for..."
               rows={3}
@@ -484,7 +484,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
                             <div className="space-y-2">
                               <Label>Display Name *</Label>
                               <Input
-                                value={field.display_name}
+                                value={field.display_name || ''}
                                 onChange={(e) => updateField(index, 'display_name', e.target.value)}
                                 placeholder="e.g., Title"
                                 required
@@ -494,7 +494,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
                             <div className="space-y-2">
                               <Label>Field Name *</Label>
                               <Input
-                                value={field.field_name}
+                                value={field.field_name || ''}
                                 onChange={(e) => updateField(index, 'field_name', e.target.value)}
                                 placeholder="e.g., title"
                                 required
@@ -528,7 +528,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
                             <div className="space-y-2">
                               <Label>Default Value</Label>
                               <Input
-                                value={field.default_value}
+                                value={field.default_value || ''}
                                 onChange={(e) => updateField(index, 'default_value', e.target.value)}
                                 placeholder="Optional default value"
                               />
@@ -538,7 +538,7 @@ export default function ContentTypeForm({ contentType, onSave, onCancel }: Conte
                           <div className="space-y-2">
                             <Label>Help Text</Label>
                             <Input
-                              value={field.help_text}
+                              value={field.help_text || ''}
                               onChange={(e) => updateField(index, 'help_text', e.target.value)}
                               placeholder="Help text for content editors"
                             />
